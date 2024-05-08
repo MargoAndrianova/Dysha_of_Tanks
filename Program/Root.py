@@ -21,27 +21,20 @@ class Dysha_of_Tanks:
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<Key>', self.handle_key_event)
-        self.screen.bind('<KeyRelease>', self.handle_key_release)
-        self.keys_pressed = set()
 
     def handle_key_event(self, event):
         key = event.keysym
-        self.keys_pressed.add(key)
-        self.move_square()
-        self.move_enemy_square()
+        self.move_square(key)
+        self.move_enemy_square(key)
 
-    def handle_key_release(self, event):
-        key = event.keysym
-        self.keys_pressed.remove(key)
-
-    def move_square(self):
-        if 'Up' in self.keys_pressed:
+    def move_square(self, key):
+        if key == 'Up':
             self.canvas.move(self.square, 0, -self.step_size)
-        if 'Down' in self.keys_pressed:
+        if key == 'Down':
             self.canvas.move(self.square, 0, self.step_size)
-        if 'Left' in self.keys_pressed:
+        if key == 'Left':
             self.canvas.move(self.square, -self.step_size, 0)
-        if 'Right' in self.keys_pressed:
+        if key == 'Right':
             self.canvas.move(self.square, self.step_size, 0)
 
         x1, y1, x2, y2 = self.canvas.coords(self.square)
@@ -54,14 +47,14 @@ class Dysha_of_Tanks:
         if y2 > board_height:
             self.canvas.move(self.square, 0, board_height - y2)
 
-    def move_enemy_square(self):
-        if 'w' in self.keys_pressed:
+    def move_enemy_square(self, key):
+        if key == 'w':
             self.canvas.move(self.enemy_square, 0, -self.step_size)
-        if 's' in self.keys_pressed:
+        if key == 's':
             self.canvas.move(self.enemy_square, 0, self.step_size)
-        if 'a' in self.keys_pressed:
+        if key == 'a':
             self.canvas.move(self.enemy_square, -self.step_size, 0)
-        if 'd' in self.keys_pressed:
+        if key == 'd':
             self.canvas.move(self.enemy_square, self.step_size, 0)
 
         x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
