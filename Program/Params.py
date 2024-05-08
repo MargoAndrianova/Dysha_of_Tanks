@@ -3,6 +3,10 @@ outline_color = "#0a1417"
 board_color = "#AAABA8"
 botton_color = "#9cacbf"
 square_color = "#d23435"
+enemy_color = "#57394a"
+
+tank_coords = [250, 150]
+enemy_coords = [1050, 575]
 
 outline_width = 2
 edge_distance_width = 200

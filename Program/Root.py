@@ -20,19 +20,29 @@ class Dysha_of_Tanks:
         self.square_size = tank_size
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
-        self.screen.bind('<Key>', self.move_square)
+        self.screen.bind('<Key>', self.handle_key_event)
+        self.screen.bind('<KeyRelease>', self.handle_key_release)
+        self.keys_pressed = set()
 
-    def move_square(self, event):
+    def handle_key_event(self, event):
         key = event.keysym
-        if key == 'Up':
-            self.canvas.move(self.square, 0, -self.step_size)
-        elif key == 'Down':
-            self.canvas.move(self.square, 0, self.step_size)
-        elif key == 'Left':
-            self.canvas.move(self.square, -self.step_size, 0)
-        elif key == 'Right':
-            self.canvas.move(self.square, self.step_size, 0)
+        self.keys_pressed.add(key)
+        self.move_square()
+        self.move_enemy_square()
 
+    def handle_key_release(self, event):
+        key = event.keysym
+        self.keys_pressed.remove(key)
+
+    def move_square(self):
+        if 'Up' in self.keys_pressed:
+            self.canvas.move(self.square, 0, -self.step_size)
+        if 'Down' in self.keys_pressed:
+            self.canvas.move(self.square, 0, self.step_size)
+        if 'Left' in self.keys_pressed:
+            self.canvas.move(self.square, -self.step_size, 0)
+        if 'Right' in self.keys_pressed:
+            self.canvas.move(self.square, self.step_size, 0)
 
         x1, y1, x2, y2 = self.canvas.coords(self.square)
         if x1 < edge_distance_width:
@@ -44,14 +54,41 @@ class Dysha_of_Tanks:
         if y2 > board_height:
             self.canvas.move(self.square, 0, board_height - y2)
 
-    def create_square(self):
-        self.square = self.canvas.create_rectangle(600, 400, 625, 425, fill=square_color)
+    def move_enemy_square(self):
+        if 'w' in self.keys_pressed:
+            self.canvas.move(self.enemy_square, 0, -self.step_size)
+        if 's' in self.keys_pressed:
+            self.canvas.move(self.enemy_square, 0, self.step_size)
+        if 'a' in self.keys_pressed:
+            self.canvas.move(self.enemy_square, -self.step_size, 0)
+        if 'd' in self.keys_pressed:
+            self.canvas.move(self.enemy_square, self.step_size, 0)
+
+        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
+        if x1 < edge_distance_width:
+            self.canvas.move(self.enemy_square, edge_distance_width - x1, 0)
+        if y1 < edge_distance_height:
+            self.canvas.move(self.enemy_square, 0, edge_distance_height - y1)
+        if x2 > board_width:
+            self.canvas.move(self.enemy_square, board_width - x2, 0)
+        if y2 > board_height:
+            self.canvas.move(self.enemy_square, 0, board_height - y2)
 
     def exit_game(self):
         self.screen.destroy()
+
+    def create_square(self):
+        self.square = self.canvas.create_rectangle(tank_coords[0], tank_coords[1],
+                                                   tank_coords[0]+tank_size, tank_coords[1]+tank_size,
+                                                   fill=square_color)
+    def create_enemy_square(self):
+        self.enemy_square = self.canvas.create_rectangle(enemy_coords[0], enemy_coords[1],
+                                                         enemy_coords[0] + tank_size, enemy_coords[1] + tank_size,
+                                                         fill=enemy_color)
 
 if __name__ == '__main__':
     screen = Tk()
     dysha = Dysha_of_Tanks(screen)
     dysha.create_square()
+    dysha.create_enemy_square()
     screen.mainloop()
