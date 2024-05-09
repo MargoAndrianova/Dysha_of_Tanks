@@ -18,3 +18,10 @@ botton_height = 45
 
 step_of_tank = 10
 tank_size = 50
+
+bullet_speed = 10
+bullet_interval = 50
+bullet_color = 'yellow'
+
+
+enemy_bullet_color = 'orange'

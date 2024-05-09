@@ -13,13 +13,15 @@ class Dysha_of_Tanks:
                                                           outline=outline_color, width=2, fill=board_color)
 
         self.exit_button = Button(self.screen, text="Вихід", command=self.exit_game, bg=botton_color,
-                             width=12, height=4)
+                                  width=12, height=4)
         self.exit_button.place(x=20, y=20)
 
         self.step_size = step_of_tank
         self.square_size = tank_size
 
         self.keys_pressed = set()
+        self.bullets = []
+        self.enemy_bullets = []
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
@@ -27,8 +29,9 @@ class Dysha_of_Tanks:
 
     def create_square(self):
         self.square = self.canvas.create_rectangle(tank_coords[0], tank_coords[1],
-                                                   tank_coords[0]+tank_size, tank_coords[1]+tank_size,
+                                                   tank_coords[0] + tank_size, tank_coords[1] + tank_size,
                                                    fill=square_color)
+
     def create_enemy_square(self):
         self.enemy_square = self.canvas.create_rectangle(enemy_coords[0], enemy_coords[1],
                                                          enemy_coords[0] + tank_size, enemy_coords[1] + tank_size,
@@ -38,7 +41,11 @@ class Dysha_of_Tanks:
         key = event.keysym
         if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
             self.keys_pressed.add(key)
-            self.move_square()
+            self.screen.after(1, self.move_square())
+        if key.lower() == 'space':
+            self.shoot()
+        if key.lower() == 'shift_l':
+            self.shoot_enemy()
 
     def handle_key_release(self, event):
         key = event.keysym
@@ -83,6 +90,38 @@ class Dysha_of_Tanks:
             self.canvas.move(self.enemy_square, board_width - x2, 0)
         if y2 > board_height:
             self.canvas.move(self.enemy_square, 0, board_height - y2)
+
+    def shoot(self):
+        x1, y1, x2, y2 = self.canvas.coords(self.square)
+        bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=bullet_color)
+        self.bullets.append(bullet)
+        self.move_bullets()
+
+    def shoot_enemy(self):
+        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
+        bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=enemy_bullet_color)
+        self.enemy_bullets.append(bullet)
+        self.move_enemy_bullets()
+
+    def move_bullets(self):
+        for bullet in self.bullets:
+            self.canvas.move(bullet, 0, -bullet_speed)
+            x1, y1, x2, y2 = self.canvas.coords(bullet)
+            if y2 < 0:
+                self.canvas.delete(bullet)
+                self.bullets.remove(bullet)
+
+        self.screen.after(bullet_interval, self.move_bullets)
+
+    def move_enemy_bullets(self):
+        for bullet in self.enemy_bullets:
+            self.canvas.move(bullet, 0, -bullet_speed)
+            x1, y1, x2, y2 = self.canvas.coords(bullet)
+            if y2 < 0:
+                self.canvas.delete(bullet)
+                self.enemy_bullets.remove(bullet)
+
+        self.screen.after(bullet_interval, self.move_enemy_bullets)
 
     def exit_game(self):
         self.screen.destroy()
