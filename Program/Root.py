@@ -19,8 +19,7 @@ class Dysha_of_Tanks:
         self.step_size = step_of_tank
         self.square_size = tank_size
 
-        self.keys_pressed_square = set()
-        self.keys_pressed_enemy_square = set()
+        self.keys_pressed = set()
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
@@ -37,22 +36,17 @@ class Dysha_of_Tanks:
 
     def handle_key_press(self, event):
         key = event.keysym
-        if key in ['Up', 'Down', 'Left', 'Right']:
-            self.keys_pressed_enemy_square.add(key)
-            self.move_enemy_square()
-        elif key.lower() in ['w', 's', 'a', 'd']:
-            self.keys_pressed_square.add(key)
+        if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
+            self.keys_pressed.add(key)
             self.move_square()
 
     def handle_key_release(self, event):
         key = event.keysym
-        if key in ['Up', 'Down', 'Left', 'Right']:
-            self.keys_pressed_enemy_square.remove(key)
-        elif key.lower() in ['w', 's', 'a', 'd']:
-            self.keys_pressed_square.remove(key)
+        if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
+            self.keys_pressed.remove(key)
 
     def move_square(self):
-        for key in self.keys_pressed_square:
+        for key in self.keys_pressed:
             if key.lower() == 'w':
                 self.canvas.move(self.square, 0, -self.step_size)
             if key.lower() == 's':
@@ -61,6 +55,14 @@ class Dysha_of_Tanks:
                 self.canvas.move(self.square, -self.step_size, 0)
             if key.lower() == 'd':
                 self.canvas.move(self.square, self.step_size, 0)
+            if 'Up' == key:
+                self.canvas.move(self.enemy_square, 0, -self.step_size)
+            if 'Down' == key:
+                self.canvas.move(self.enemy_square, 0, self.step_size)
+            if 'Left' == key:
+                self.canvas.move(self.enemy_square, -self.step_size, 0)
+            if 'Right' == key:
+                self.canvas.move(self.enemy_square, self.step_size, 0)
 
         x1, y1, x2, y2 = self.canvas.coords(self.square)
         if x1 < edge_distance_width:
@@ -71,17 +73,6 @@ class Dysha_of_Tanks:
             self.canvas.move(self.square, board_width - x2, 0)
         if y2 > board_height:
             self.canvas.move(self.square, 0, board_height - y2)
-
-    def move_enemy_square(self):
-        for key in self.keys_pressed_enemy_square:
-            if 'Up' == key:
-                self.canvas.move(self.enemy_square, 0, -self.step_size)
-            if 'Down' == key:
-                self.canvas.move(self.enemy_square, 0, self.step_size)
-            if 'Left' == key:
-                self.canvas.move(self.enemy_square, -self.step_size, 0)
-            if 'Right' == key:
-                self.canvas.move(self.enemy_square, self.step_size, 0)
 
         x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
         if x1 < edge_distance_width:
