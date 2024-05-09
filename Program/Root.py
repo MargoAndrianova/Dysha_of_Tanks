@@ -1,5 +1,6 @@
 from tkinter import *
 from Params import *
+import time
 
 class Dysha_of_Tanks:
     def __init__(self, screen):
@@ -10,7 +11,7 @@ class Dysha_of_Tanks:
         self.canvas.pack(fill=BOTH, expand=True)
 
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
-                                                          outline=outline_color, width=2, fill=board_color)
+                                                          outline=outline_color, width=outline_width, fill=board_color)
 
         self.exit_button = Button(self.screen, text="Вихід", command=self.exit_game, bg=botton_color,
                                   width=12, height=4)
@@ -22,6 +23,9 @@ class Dysha_of_Tanks:
         self.keys_pressed = set()
         self.bullets = []
         self.enemy_bullets = []
+
+        self.last_shot_time_player = 0
+        self.last_shot_time_enemy = 0
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
@@ -41,7 +45,7 @@ class Dysha_of_Tanks:
         key = event.keysym
         if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
             self.keys_pressed.add(key)
-            self.screen.after(1, self.move_square())
+            self.screen.after(1, self.move_square)
         if key.lower() == 'space':
             self.shoot()
         if key.lower() == 'shift_l':
@@ -71,6 +75,10 @@ class Dysha_of_Tanks:
             if 'Right' == key:
                 self.canvas.move(self.enemy_square, self.step_size, 0)
 
+        self.limit_tank_movement()
+
+    def limit_tank_movement(self):
+        # Обмеження для першого танка
         x1, y1, x2, y2 = self.canvas.coords(self.square)
         if x1 < edge_distance_width:
             self.canvas.move(self.square, edge_distance_width - x1, 0)
@@ -81,6 +89,7 @@ class Dysha_of_Tanks:
         if y2 > board_height:
             self.canvas.move(self.square, 0, board_height - y2)
 
+        # Обмеження для другого танка
         x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
         if x1 < edge_distance_width:
             self.canvas.move(self.enemy_square, edge_distance_width - x1, 0)
@@ -92,19 +101,23 @@ class Dysha_of_Tanks:
             self.canvas.move(self.enemy_square, 0, board_height - y2)
 
     def shoot(self):
-        x1, y1, x2, y2 = self.canvas.coords(self.square)
-        bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=bullet_color)
-        self.bullets.append(bullet)
-        self.move_bullets()
+        current_time = time.time()
+        if current_time - self.last_shot_time_player >= 1:
+            x1, y1, x2, y2 = self.canvas.coords(self.square)
+            bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=bullet_color)
+            self.bullets.append(bullet)
+            self.last_shot_time_player = current_time
 
     def shoot_enemy(self):
-        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
-        bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=enemy_bullet_color)
-        self.enemy_bullets.append(bullet)
-        self.move_enemy_bullets()
+        current_time = time.time()
+        if current_time - self.last_shot_time_enemy >= 1:
+            x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
+            bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=enemy_bullet_color)
+            self.enemy_bullets.append(bullet)
+            self.last_shot_time_enemy = current_time
 
     def move_bullets(self):
-        for bullet in self.bullets:
+        for bullet in self.bullets[:]:
             self.canvas.move(bullet, 0, -bullet_speed)
             x1, y1, x2, y2 = self.canvas.coords(bullet)
             if y2 < 0:
@@ -114,7 +127,7 @@ class Dysha_of_Tanks:
         self.screen.after(bullet_interval, self.move_bullets)
 
     def move_enemy_bullets(self):
-        for bullet in self.enemy_bullets:
+        for bullet in self.enemy_bullets[:]:
             self.canvas.move(bullet, 0, -bullet_speed)
             x1, y1, x2, y2 = self.canvas.coords(bullet)
             if y2 < 0:
@@ -122,6 +135,25 @@ class Dysha_of_Tanks:
                 self.enemy_bullets.remove(bullet)
 
         self.screen.after(bullet_interval, self.move_enemy_bullets)
+
+    def check_bullet_collision(self):
+        # Перевірка попадання куль гравця у ворожий танк
+        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
+        for bullet in self.bullets[:]:
+            bx1, by1, bx2, by2 = self.canvas.coords(bullet)
+            if bx1 < x2 and bx2 > x1 and by1 < y2 and by2 > y1:
+                self.canvas.delete(bullet)
+                self.bullets.remove(bullet)
+
+        # Перевірка попадання куль ворога у танк гравця
+        x1, y1, x2, y2 = self.canvas.coords(self.square)
+        for bullet in self.enemy_bullets[:]:
+            bx1, by1, bx2, by2 = self.canvas.coords(bullet)
+            if bx1 < x2 and bx2 > x1 and by1 < y2 and by2 > y1:
+                self.canvas.delete(bullet)
+                self.enemy_bullets.remove(bullet)
+
+        self.screen.after(bullet_interval, self.check_bullet_collision)
 
     def exit_game(self):
         self.screen.destroy()
@@ -131,4 +163,7 @@ if __name__ == '__main__':
     dysha = Dysha_of_Tanks(screen)
     dysha.create_square()
     dysha.create_enemy_square()
+    dysha.move_bullets()
+    dysha.move_enemy_bullets()
+    dysha.check_bullet_collision()
     screen.mainloop()
