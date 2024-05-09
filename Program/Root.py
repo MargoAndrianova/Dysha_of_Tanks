@@ -19,53 +19,67 @@ class Dysha_of_Tanks:
         self.step_size = step_of_tank
         self.square_size = tank_size
 
+        self.keys_pressed = set()
+
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
-        self.screen.bind('<Key>', self.handle_key_event)
+        self.screen.bind('<KeyPress>', self.handle_key_press)
+        self.screen.bind('<KeyRelease>', self.handle_key_release)
 
-    def handle_key_event(self, event):
+    def handle_key_press(self, event):
         key = event.keysym
-        self.move_square(key)
-        self.move_enemy_square(key)
+        if key in ['Up', 'Down', 'Left', 'Right', 'Ww', 'Ss', 'Aa', 'Dd']:
+            self.keys_pressed.add(key)
+            self.move_square()
+            self.move_objects()
 
-    def move_square(self, key):
-        if key == 'Up':
-            self.canvas.move(self.square, 0, -self.step_size)
-        if key == 'Down':
-            self.canvas.move(self.square, 0, self.step_size)
-        if key == 'Left':
-            self.canvas.move(self.square, -self.step_size, 0)
-        if key == 'Right':
-            self.canvas.move(self.square, self.step_size, 0)
+    def handle_key_release(self, event):
+        key = event.keysym
+        if key in ['Up', 'Down', 'Left', 'Right', 'Ww', 'Ss', 'Aa', 'Dd']:
+            self.keys_pressed.remove(key)
+            self.move_square()
+            self.move_objects()
 
-        x1, y1, x2, y2 = self.canvas.coords(self.square)
-        if x1 < edge_distance_width:
-            self.canvas.move(self.square, edge_distance_width - x1, 0)
-        if y1 < edge_distance_height:
-            self.canvas.move(self.square, 0, edge_distance_height - y1)
-        if x2 > board_width:
-            self.canvas.move(self.square, board_width - x2, 0)
-        if y2 > board_height:
-            self.canvas.move(self.square, 0, board_height - y2)
+    def move_square(self):
+        for key in self.keys_pressed:
+            if key in 'Ww':
+                self.canvas.move(self.square, 0, -self.step_size)
+            if key in 'Ss':
+                self.canvas.move(self.square, 0, self.step_size)
+            if key in 'Aa':
+                self.canvas.move(self.square, -self.step_size, 0)
+            if key in 'Dd':
+                self.canvas.move(self.square, self.step_size, 0)
 
-    def move_enemy_square(self, key):
-        if key == 'w':
-            self.canvas.move(self.enemy_square, 0, -self.step_size)
-        if key == 's':
-            self.canvas.move(self.enemy_square, 0, self.step_size)
-        if key == 'a':
-            self.canvas.move(self.enemy_square, -self.step_size, 0)
-        if key == 'd':
-            self.canvas.move(self.enemy_square, self.step_size, 0)
+            x1, y1, x2, y2 = self.canvas.coords(self.square)
+            if x1 < edge_distance_width:
+                self.canvas.move(self.square, edge_distance_width - x1, 0)
+            if y1 < edge_distance_height:
+                self.canvas.move(self.square, 0, edge_distance_height - y1)
+            if x2 > board_width:
+                self.canvas.move(self.square, board_width - x2, 0)
+            if y2 > board_height:
+                self.canvas.move(self.square, 0, board_height - y2)
 
-        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
-        if x1 < edge_distance_width:
-            self.canvas.move(self.enemy_square, edge_distance_width - x1, 0)
-        if y1 < edge_distance_height:
-            self.canvas.move(self.enemy_square, 0, edge_distance_height - y1)
-        if x2 > board_width:
-            self.canvas.move(self.enemy_square, board_width - x2, 0)
-        if y2 > board_height:
-            self.canvas.move(self.enemy_square, 0, board_height - y2)
+    def move_enemy_square(self):
+        for key in self.keys_pressed:
+            if key == 'Up':
+                self.canvas.move(self.enemy_square, 0, -self.step_size)
+            if key == 'Down':
+                self.canvas.move(self.enemy_square, 0, self.step_size)
+            if key == 'Left':
+                self.canvas.move(self.enemy_square, -self.step_size, 0)
+            if key == 'Right':
+                self.canvas.move(self.enemy_square, self.step_size, 0)
+
+            x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
+            if x1 < edge_distance_width:
+                self.canvas.move(self.enemy_square, edge_distance_width - x1, 0)
+            if y1 < edge_distance_height:
+                self.canvas.move(self.enemy_square, 0, edge_distance_height - y1)
+            if x2 > board_width:
+                self.canvas.move(self.enemy_square, board_width - x2, 0)
+            if y2 > board_height:
+                self.canvas.move(self.enemy_square, 0, board_height - y2)
 
     def exit_game(self):
         self.screen.destroy()
