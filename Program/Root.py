@@ -46,9 +46,9 @@ class Dysha_of_Tanks:
         if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
             self.keys_pressed.add(key)
             self.screen.after(1, self.move_square)
-        if key.lower() == 'space':
-            self.shoot()
         if key.lower() == 'shift_l':
+            self.shoot()
+        if key.lower() == 'shift_r':
             self.shoot_enemy()
 
     def handle_key_release(self, event):
@@ -75,65 +75,79 @@ class Dysha_of_Tanks:
             if 'Right' == key:
                 self.canvas.move(self.enemy_square, self.step_size, 0)
 
-        self.limit_tank_movement()
+        self.limit_movement(self.square)
+        self.limit_movement(self.enemy_square)
 
-    def limit_tank_movement(self):
-        # Обмеження для першого танка
-        x1, y1, x2, y2 = self.canvas.coords(self.square)
-        if x1 < edge_distance_width:
-            self.canvas.move(self.square, edge_distance_width - x1, 0)
-        if y1 < edge_distance_height:
-            self.canvas.move(self.square, 0, edge_distance_height - y1)
-        if x2 > board_width:
-            self.canvas.move(self.square, board_width - x2, 0)
-        if y2 > board_height:
-            self.canvas.move(self.square, 0, board_height - y2)
+    def limit_movement(self, object):
+        # Обмеження для танка
+        x1, y1, x2, y2 = self.canvas.coords(object)
+        if x1 <= edge_distance_width:
+            self.canvas.move(object, edge_distance_width - x1, 0)
+        if y1 <= edge_distance_height:
+            self.canvas.move(object, 0, edge_distance_height - y1)
+        if x2 >= board_width:
+            self.canvas.move(object, board_width - x2, 0)
+        if y2 >= board_height:
+            self.canvas.move(object, 0, board_height - y2)
 
-        # Обмеження для другого танка
-        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
-        if x1 < edge_distance_width:
-            self.canvas.move(self.enemy_square, edge_distance_width - x1, 0)
-        if y1 < edge_distance_height:
-            self.canvas.move(self.enemy_square, 0, edge_distance_height - y1)
-        if x2 > board_width:
-            self.canvas.move(self.enemy_square, board_width - x2, 0)
-        if y2 > board_height:
-            self.canvas.move(self.enemy_square, 0, board_height - y2)
+    def limit_bullet(self, object):
+        x1, y1, x2, y2 = self.canvas.coords(object)
+        if x1 <= edge_distance_width - outline_width:
+            self.canvas.delete(object)
+            self.bullets.remove(object)
+        if y1 <= edge_distance_height - outline_width:
+            self.canvas.delete(object)
+            self.bullets.remove(object)
+        if x2 >= board_width - outline_width:
+            self.canvas.delete(object)
+            self.bullets.remove(object)
+        if y2 >= board_height - outline_width:
+            self.canvas.delete(object)
+            self.bullets.remove(object)
+
+    def limit_enemy_bullet(self, object):
+        x1, y1, x2, y2 = self.canvas.coords(object)
+        if x1 <= edge_distance_width - outline_width:
+            self.canvas.delete(object)
+            self.enemy_bullets.remove(object)
+        if y1 <= edge_distance_height - outline_width:
+            self.canvas.delete(object)
+            self.enemy_bullets.remove(object)
+        if x2 >= board_width - outline_width:
+            self.canvas.delete(object)
+            self.enemy_bullets.remove(object)
+        if y2 >= board_height - outline_width:
+            self.canvas.delete(object)
+            self.enemy_bullets.remove(object)
 
     def shoot(self):
         current_time = time.time()
         if current_time - self.last_shot_time_player >= 1:
             x1, y1, x2, y2 = self.canvas.coords(self.square)
-            bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=bullet_color)
-            self.bullets.append(bullet)
+            self.bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - bullet_speed, (x1 + x2) // 2 + 2, y1,
+                                                       fill=bullet_color)
+            self.bullets.append(self.bullet)
             self.last_shot_time_player = current_time
 
     def shoot_enemy(self):
         current_time = time.time()
         if current_time - self.last_shot_time_enemy >= 1:
             x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
-            bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - 10, (x1 + x2) // 2 + 2, y1, fill=enemy_bullet_color)
-            self.enemy_bullets.append(bullet)
+            self.enemy_bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - bullet_speed, (x1 + x2) // 2 + 2,
+                                                             y1, fill=enemy_bullet_color)
+            self.enemy_bullets.append(self.enemy_bullet)
             self.last_shot_time_enemy = current_time
 
     def move_bullets(self):
         for bullet in self.bullets[:]:
             self.canvas.move(bullet, 0, -bullet_speed)
-            x1, y1, x2, y2 = self.canvas.coords(bullet)
-            if y2 < 0:
-                self.canvas.delete(bullet)
-                self.bullets.remove(bullet)
-
+            self.limit_bullet(bullet)
         self.screen.after(bullet_interval, self.move_bullets)
 
     def move_enemy_bullets(self):
         for bullet in self.enemy_bullets[:]:
             self.canvas.move(bullet, 0, -bullet_speed)
-            x1, y1, x2, y2 = self.canvas.coords(bullet)
-            if y2 < 0:
-                self.canvas.delete(bullet)
-                self.enemy_bullets.remove(bullet)
-
+            self.limit_enemy_bullet(bullet)
         self.screen.after(bullet_interval, self.move_enemy_bullets)
 
     def check_bullet_collision(self):

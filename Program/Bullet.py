@@ -1,6 +1,5 @@
 from tkinter import Canvas
 
-
 class Bullet:
     def __init__(self, canvas, start_pos, color):
         self.canvas = canvas
