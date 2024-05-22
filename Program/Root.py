@@ -28,7 +28,7 @@ class Dysha_of_Tanks:
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
 
-        self.player_angle = 0  # Кут повороту танка гравця в градусах
+        self.player_angle = 180  # Кут повороту танка гравця в градусах
         self.enemy_angle = 0   # Кут повороту ворожого танка в градусах
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
@@ -74,9 +74,9 @@ class Dysha_of_Tanks:
         key = event.keysym
         self.keys_pressed.add(key)
         if key.lower() == 'shift_l':
-            self.shoot(self.square, self.player_angle)
+            self.shoot(self.square, self.player_angle + 180)  # Стріляє в протилежну сторону
         if key.lower() == 'shift_r':
-            self.shoot_enemy(self.enemy_square, self.enemy_angle)
+            self.shoot_enemy(self.enemy_square, self.enemy_angle + 180)  # Стріляє з протилежної сторони танка
 
     def handle_key_release(self, event):
         key = event.keysym
@@ -142,81 +142,69 @@ class Dysha_of_Tanks:
 
     def limit_bullet(self, object):
         x1, y1, x2, y2 = self.canvas.coords(object)
-        if x1 <= edge_distance_width - outline_width:
+        if x1 <= edge_distance_width - outline_width or x2 >= board_width - outline_width or y1 <= edge_distance_height - outline_width or y2 >= board_height - outline_width:
             self.canvas.delete(object)
-            self.bullets.remove(object)
-        if y1 <= edge_distance_height - outline_width:
-            self.canvas.delete(object)
-            self.bullets.remove(object)
-        if x2 >= board_width - outline_width:
-            self.canvas.delete(object)
-            self.bullets.remove(object)
-        if y2 >= board_height - outline_width:
-            self.canvas.delete(object)
-            self.bullets.remove(object)
-
-    def limit_enemy_bullet(self, object):
-        x1, y1, x2, y2 = self.canvas.coords(object)
-        if x1 <= edge_distance_width - outline_width:
-            self.canvas.delete(object)
-            self.enemy_bullets.remove(object)
-        if y1 <= edge_distance_height - outline_width:
-            self.canvas.delete(object)
-            self.enemy_bullets.remove(object)
-        if x2 >= board_width - outline_width:
-            self.canvas.delete(object)
-            self.enemy_bullets.remove(object)
-        if y2 >= board_height - outline_width:
-            self.canvas.delete(object)
-            self.enemy_bullets.remove(object)
+            if object in [bullet[0] for bullet in self.bullets]:
+                self.bullets = [bullet for bullet in self.bullets if bullet[0] != object]
+            else:
+                self.enemy_bullets = [bullet for bullet in self.enemy_bullets if bullet[0] != object]
 
     def shoot(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_player >= 1:
-            bullet_coords = self.calculate_bullet_coords(tank, angle, -bullet_speed)
-            self.bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
-            self.bullets.append(self.bullet)
+            bullet_coords = self.calculate_bullet_coords(tank, angle)
+            bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
+            self.bullets.append((bullet, angle))  # Зберігаємо кут разом з кулею
             self.last_shot_time_player = current_time
 
     def shoot_enemy(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_enemy >= 1:
-            bullet_coords = self.calculate_bullet_coords(tank, angle, -bullet_speed)
-            self.enemy_bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
-            self.enemy_bullets.append(self.enemy_bullet)
+            bullet_coords = self.calculate_bullet_coords(tank, angle)
+            bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
+            self.enemy_bullets.append((bullet, angle))  # Зберігаємо кут разом з кулею
             self.last_shot_time_enemy = current_time
 
-    def calculate_bullet_coords(self, tank, angle, speed):
+    def calculate_bullet_coords(self, tank, angle):
+        x, y = self.get_tank_front(tank, angle)
+        return x - 2, y - 2, x + 2, y + 2
+
+    def get_tank_front(self, tank, angle):
         x, y = self.get_tank_center(tank)
         rad = math.radians(angle)
-        bullet_x = x + speed * math.cos(rad)
-        bullet_y = y + speed * math.sin(rad)
-        return bullet_x - 2, bullet_y - 2, bullet_x + 2, bullet_y + 2
+        front_x = x + (tank_size / 2) * math.cos(rad)
+        front_y = y + (tank_size / 2) * math.sin(rad)
+        return front_x, front_y
 
     def move_bullets(self):
-        for bullet in self.bullets[:]:
-            self.canvas.move(bullet, 0, -bullet_speed)
-            self.limit_bullet(bullet)
+        for bullet, angle in self.bullets[:]:
+            self.move_bullet(bullet, angle)
         self.screen.after(bullet_interval, self.move_bullets)
 
     def move_enemy_bullets(self):
-        for bullet in self.enemy_bullets[:]:
-            self.canvas.move(bullet, 0, -bullet_speed)
-            self.limit_enemy_bullet(bullet)
+        for bullet, angle in self.enemy_bullets[:]:
+            self.move_bullet(bullet, angle)
         self.screen.after(bullet_interval, self.move_enemy_bullets)
+
+    def move_bullet(self, bullet, angle):
+        rad = math.radians(angle)
+        dx = bullet_speed * math.cos(rad)
+        dy = bullet_speed * math.sin(rad)
+        self.canvas.move(bullet, dx, dy)
+        self.limit_bullet(bullet)
 
     def check_bullet_collision(self):
         # Перевірка попадання куль гравця у ворожий танк
-        for bullet in self.bullets[:]:
+        for bullet, _ in self.bullets[:]:
             if self.check_collision(bullet, self.enemy_square):
                 self.canvas.delete(bullet)
-                self.bullets.remove(bullet)
+                self.bullets.remove((bullet, _))
 
         # Перевірка попадання куль ворога у танк гравця
-        for bullet in self.enemy_bullets[:]:
+        for bullet, _ in self.enemy_bullets[:]:
             if self.check_collision(bullet, self.square):
                 self.canvas.delete(bullet)
-                self.enemy_bullets.remove(bullet)
+                self.enemy_bullets.remove((bullet, _))
 
         self.screen.after(bullet_interval, self.check_bullet_collision)
 
