@@ -8,7 +8,20 @@ bullet_color = 'yellow'
 enemy_bullet_color = 'orange'
 
 tank_coords = [250, 150]
-enemy_coords = [1050, 575]
+enemy_coords = [1100, 625]
+
+step_of_tank = 10
+angle_turn = 10
+tank_size = 50
+
+player_angle = 180
+enemy_angle = 0
+
+player_hp = 100
+enemy_hp = 100
+
+damage = 10
+touch_damage = 5
 
 outline_width = 2
 edge_distance_width = 200
@@ -18,9 +31,9 @@ board_height = 775 - edge_distance_height
 botton_width = 20
 botton_height = 45
 
-step_of_tank = 10
-angle_turn = 10
-tank_size = 50
-
-bullet_speed = 10
+bullet_speed = 15
 bullet_interval = 50
+
+hp_length = 200
+hp_height = 25
+hp_outline_width = 3
