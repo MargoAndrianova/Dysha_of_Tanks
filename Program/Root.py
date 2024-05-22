@@ -1,6 +1,7 @@
 from tkinter import *
 from Params import *
 import time
+import math
 
 class Dysha_of_Tanks:
     def __init__(self, screen):
@@ -27,60 +28,109 @@ class Dysha_of_Tanks:
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
 
+        self.player_angle = 0  # Кут повороту танка гравця в градусах
+        self.enemy_angle = 0   # Кут повороту ворожого танка в градусах
+
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
         self.screen.bind('<KeyRelease>', self.handle_key_release)
 
+        self.create_square()
+        self.create_enemy_square()
+
+        self.move_bullets()
+        self.move_enemy_bullets()
+        self.check_bullet_collision()
+        self.update_movement()
+
     def create_square(self):
-        self.square = self.canvas.create_rectangle(tank_coords[0], tank_coords[1],
-                                                   tank_coords[0] + tank_size, tank_coords[1] + tank_size,
-                                                   fill=square_color)
+        x, y = tank_coords
+        self.square = self.create_rotated_polygon(x, y, self.square_size, self.player_angle, square_color)
 
     def create_enemy_square(self):
-        self.enemy_square = self.canvas.create_rectangle(enemy_coords[0], enemy_coords[1],
-                                                         enemy_coords[0] + tank_size, enemy_coords[1] + tank_size,
-                                                         fill=enemy_color)
+        x, y = enemy_coords
+        self.enemy_square = self.create_rotated_polygon(x, y, self.square_size, self.enemy_angle, enemy_color)
+
+    def create_rotated_polygon(self, x, y, size, angle, color):
+        points = self.calculate_square_points(x, y, size, angle)
+        return self.canvas.create_polygon(points, fill=color)
+
+    def calculate_square_points(self, x, y, size, angle):
+        half_size = size / 2
+        rad = math.radians(angle)
+        cos_val = math.cos(rad)
+        sin_val = math.sin(rad)
+
+        points = [
+            (x + half_size * cos_val - half_size * sin_val, y + half_size * sin_val + half_size * cos_val),
+            (x - half_size * cos_val - half_size * sin_val, y - half_size * sin_val + half_size * cos_val),
+            (x - half_size * cos_val + half_size * sin_val, y - half_size * sin_val - half_size * cos_val),
+            (x + half_size * cos_val + half_size * sin_val, y + half_size * sin_val - half_size * cos_val)
+        ]
+
+        return points
 
     def handle_key_press(self, event):
         key = event.keysym
-        if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
-            self.keys_pressed.add(key)
-            self.screen.after(1, self.move_square)
+        self.keys_pressed.add(key)
         if key.lower() == 'shift_l':
-            self.shoot()
+            self.shoot(self.square, self.player_angle)
         if key.lower() == 'shift_r':
-            self.shoot_enemy()
+            self.shoot_enemy(self.enemy_square, self.enemy_angle)
 
     def handle_key_release(self, event):
         key = event.keysym
-        if key in ['Up', 'Down', 'Left', 'Right'] or key.lower() in ['w', 's', 'a', 'd']:
-            self.keys_pressed.remove(key)
+        self.keys_pressed.discard(key)
 
-    def move_square(self):
+    def update_movement(self):
         for key in self.keys_pressed:
             if key.lower() == 'w':
-                self.canvas.move(self.square, 0, -self.step_size)
+                self.move_tank(self.square, self.player_angle, -self.step_size)
             if key.lower() == 's':
-                self.canvas.move(self.square, 0, self.step_size)
+                self.move_tank(self.square, self.player_angle, self.step_size)
+            if key == 'Up':
+                self.move_tank(self.enemy_square, self.enemy_angle, -self.step_size)
+            if key == 'Down':
+                self.move_tank(self.enemy_square, self.enemy_angle, self.step_size)
             if key.lower() == 'a':
-                self.canvas.move(self.square, -self.step_size, 0)
+                self.player_angle -= 5  # Поворот вліво
+                self.update_tank_rotation(self.square, self.player_angle)
             if key.lower() == 'd':
-                self.canvas.move(self.square, self.step_size, 0)
-            if 'Up' == key:
-                self.canvas.move(self.enemy_square, 0, -self.step_size)
-            if 'Down' == key:
-                self.canvas.move(self.enemy_square, 0, self.step_size)
-            if 'Left' == key:
-                self.canvas.move(self.enemy_square, -self.step_size, 0)
-            if 'Right' == key:
-                self.canvas.move(self.enemy_square, self.step_size, 0)
+                self.player_angle += 5  # Поворот вправо
+                self.update_tank_rotation(self.square, self.player_angle)
+            if key == 'Left':
+                self.enemy_angle -= 5  # Поворот вліво
+                self.update_tank_rotation(self.enemy_square, self.enemy_angle)
+            if key == 'Right':
+                self.enemy_angle += 5  # Поворот вправо
+                self.update_tank_rotation(self.enemy_square, self.enemy_angle)
 
         self.limit_movement(self.square)
         self.limit_movement(self.enemy_square)
 
+        self.screen.after(50, self.update_movement)
+
+    def move_tank(self, tank, angle, step):
+        rad = math.radians(angle)
+        dx = step * math.cos(rad)
+        dy = step * math.sin(rad)
+        self.canvas.move(tank, dx, dy)
+
+    def update_tank_rotation(self, tank, angle):
+        x, y = self.get_tank_center(tank)
+        points = self.calculate_square_points(x, y, self.square_size, angle)
+        self.canvas.coords(tank, *sum(points, ()))
+
+    def get_tank_center(self, tank):
+        coords = self.canvas.coords(tank)
+        x = sum(coords[::2]) / len(coords[::2])
+        y = sum(coords[1::2]) / len(coords[1::2])
+        return x, y
+
     def limit_movement(self, object):
         # Обмеження для танка
-        x1, y1, x2, y2 = self.canvas.coords(object)
+        coords = self.canvas.coords(object)
+        x1, y1, x2, y2 = min(coords[::2]), min(coords[1::2]), max(coords[::2]), max(coords[1::2])
         if x1 <= edge_distance_width:
             self.canvas.move(object, edge_distance_width - x1, 0)
         if y1 <= edge_distance_height:
@@ -120,23 +170,28 @@ class Dysha_of_Tanks:
             self.canvas.delete(object)
             self.enemy_bullets.remove(object)
 
-    def shoot(self):
+    def shoot(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_player >= 1:
-            x1, y1, x2, y2 = self.canvas.coords(self.square)
-            self.bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - bullet_speed, (x1 + x2) // 2 + 2, y1,
-                                                       fill=bullet_color)
+            bullet_coords = self.calculate_bullet_coords(tank, angle, -bullet_speed)
+            self.bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
             self.bullets.append(self.bullet)
             self.last_shot_time_player = current_time
 
-    def shoot_enemy(self):
+    def shoot_enemy(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_enemy >= 1:
-            x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
-            self.enemy_bullet = self.canvas.create_rectangle((x1 + x2) // 2 - 2, y1 - bullet_speed, (x1 + x2) // 2 + 2,
-                                                             y1, fill=enemy_bullet_color)
+            bullet_coords = self.calculate_bullet_coords(tank, angle, -bullet_speed)
+            self.enemy_bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
             self.enemy_bullets.append(self.enemy_bullet)
             self.last_shot_time_enemy = current_time
+
+    def calculate_bullet_coords(self, tank, angle, speed):
+        x, y = self.get_tank_center(tank)
+        rad = math.radians(angle)
+        bullet_x = x + speed * math.cos(rad)
+        bullet_y = y + speed * math.sin(rad)
+        return bullet_x - 2, bullet_y - 2, bullet_x + 2, bullet_y + 2
 
     def move_bullets(self):
         for bullet in self.bullets[:]:
@@ -152,22 +207,25 @@ class Dysha_of_Tanks:
 
     def check_bullet_collision(self):
         # Перевірка попадання куль гравця у ворожий танк
-        x1, y1, x2, y2 = self.canvas.coords(self.enemy_square)
         for bullet in self.bullets[:]:
-            bx1, by1, bx2, by2 = self.canvas.coords(bullet)
-            if bx1 < x2 and bx2 > x1 and by1 < y2 and by2 > y1:
+            if self.check_collision(bullet, self.enemy_square):
                 self.canvas.delete(bullet)
                 self.bullets.remove(bullet)
 
         # Перевірка попадання куль ворога у танк гравця
-        x1, y1, x2, y2 = self.canvas.coords(self.square)
         for bullet in self.enemy_bullets[:]:
-            bx1, by1, bx2, by2 = self.canvas.coords(bullet)
-            if bx1 < x2 and bx2 > x1 and by1 < y2 and by2 > y1:
+            if self.check_collision(bullet, self.square):
                 self.canvas.delete(bullet)
                 self.enemy_bullets.remove(bullet)
 
         self.screen.after(bullet_interval, self.check_bullet_collision)
+
+    def check_collision(self, bullet, tank):
+        bullet_coords = self.canvas.coords(bullet)
+        tank_coords = self.canvas.coords(tank)
+        bullet_x1, bullet_y1, bullet_x2, bullet_y2 = min(bullet_coords[::2]), min(bullet_coords[1::2]), max(bullet_coords[::2]), max(bullet_coords[1::2])
+        tank_x1, tank_y1, tank_x2, tank_y2 = min(tank_coords[::2]), min(tank_coords[1::2]), max(tank_coords[::2]), max(tank_coords[1::2])
+        return bullet_x1 < tank_x2 and bullet_x2 > tank_x1 and bullet_y1 < tank_y2 and bullet_y2 > tank_y1
 
     def exit_game(self):
         self.screen.destroy()
@@ -175,9 +233,4 @@ class Dysha_of_Tanks:
 if __name__ == '__main__':
     screen = Tk()
     dysha = Dysha_of_Tanks(screen)
-    dysha.create_square()
-    dysha.create_enemy_square()
-    dysha.move_bullets()
-    dysha.move_enemy_bullets()
-    dysha.check_bullet_collision()
     screen.mainloop()
