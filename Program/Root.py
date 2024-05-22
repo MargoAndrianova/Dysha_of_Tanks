@@ -14,7 +14,7 @@ class Dysha_of_Tanks:
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
                                                           outline=outline_color, width=outline_width, fill=board_color)
 
-        self.exit_button = Button(self.screen, text="Exit", command=self.exit_game, bg=botton_color,
+        self.exit_button = Button(self.screen, text="Вихід", command=self.exit_game, bg=botton_color,
                                   width=12, height=4)
         self.exit_button.place(x=20, y=20)
 
@@ -30,14 +30,14 @@ class Dysha_of_Tanks:
 
         self.player_hp = player_hp
         self.enemy_hp = enemy_hp
-        self.damage = damage  # HP reduction on hit
-        self.touch_damage = touch_damage  # HP reduction on collision
+        self.damage = damage  # Зменшення HP при влучанні
+        self.touch_damage = touch_damage  # Зменшення HP при зіткненні
 
         self.hp_length = hp_length
         self.hp_height = hp_height
         self.hp_outline_width = hp_outline_width
 
-        # Placing HP bars
+        # Розміщення шкал HP
         self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
                                                           edge_distance_width + self.hp_length, edge_distance_height - 10,
                                                           outline='black', width=self.hp_outline_width)
@@ -57,14 +57,17 @@ class Dysha_of_Tanks:
         self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 50, board_height + 20 + self.hp_height / 2,
                                                      text=f'HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
 
-        self.player_angle = player_angle  # Initial player tank angle
-        self.enemy_angle = enemy_angle  # Initial enemy tank angle
+        self.player_angle = player_angle  # Початковий кут повороту танка гравця
+        self.enemy_angle = enemy_angle  # Кут повороту ворожого танка в градусах
+
+        self.player_direction = {'x': 0, 'y': 0}
+        self.enemy_direction = {'x': 0, 'y': 0}
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
         self.screen.bind('<KeyRelease>', self.handle_key_release)
 
-        # Disable Caps Lock and Tab keys
+        # Відключення клавіш Caps Lock та Tab
         self.screen.bind('<Caps_Lock>', self.disable_key)
         self.screen.bind('<Tab>', self.disable_key)
 
@@ -108,49 +111,57 @@ class Dysha_of_Tanks:
         key = event.keysym
         self.keys_pressed.add(key)
         if key.lower() == 'shift_l':
-            self.shoot(self.square, self.player_angle + 180)  # Shoot in the opposite direction
+            self.shoot(self.square, self.player_angle + 180)  # Стріляє в протилежну сторону
         if key.lower() == 'shift_r':
-            self.shoot_enemy(self.enemy_square, self.enemy_angle + 180)  # Shoot in the opposite direction
+            self.shoot_enemy(self.enemy_square, self.enemy_angle + 180)  # Стріляє з протилежної сторони танка
 
     def handle_key_release(self, event):
         key = event.keysym
-        self.keys_pressed.discard(key)
+        if key in self.keys_pressed:
+            self.keys_pressed.remove(key)
 
     def disable_key(self, event):
         return "break"
 
     def update_movement(self):
-        for key in self.keys_pressed:
-            if key.lower() == 'w':
-                self.move_tank(self.square, self.player_angle, -self.step_size)
-            if key.lower() == 's':
-                self.move_tank(self.square, self.player_angle, self.step_size)
-            if key == 'Up':
-                self.move_tank(self.enemy_square, self.enemy_angle, -self.step_size)
-            if key == 'Down':
-                self.move_tank(self.enemy_square, self.enemy_angle, self.step_size)
-            if key.lower() == 'a':
-                self.player_angle -= angle_turn  # Turn left
-                self.update_tank_rotation(self.square, self.player_angle)
-            if key.lower() == 'd':
-                self.player_angle += angle_turn  # Turn right
-                self.update_tank_rotation(self.square, self.player_angle)
-            if key == 'Left':
-                self.enemy_angle -= angle_turn  # Turn left
-                self.update_tank_rotation(self.enemy_square, self.enemy_angle)
-            if key == 'Right':
-                self.enemy_angle += angle_turn  # Turn right
-                self.update_tank_rotation(self.enemy_square, self.enemy_angle)
+        self.update_player_direction()
+        self.update_enemy_direction()
 
-        self.limit_movement(self.square)
-        self.limit_movement(self.enemy_square)
+        self.move_tank(self.square, self.player_angle, self.player_direction)
+        self.move_tank(self.enemy_square, self.enemy_angle, self.enemy_direction)
 
         self.screen.after(50, self.update_movement)
 
-    def move_tank(self, tank, angle, step):
+    def update_player_direction(self):
+        self.player_direction = {'x': 0, 'y': 0}
+        if 'w' in self.keys_pressed:
+            self.player_direction['y'] = -self.step_size
+        if 's' in self.keys_pressed:
+            self.player_direction['y'] = self.step_size
+        if 'a' in self.keys_pressed:
+            self.player_angle -= angle_turn  # Поворот вліво
+            self.update_tank_rotation(self.square, self.player_angle)
+        if 'd' in self.keys_pressed:
+            self.player_angle += angle_turn  # Поворот вправо
+            self.update_tank_rotation(self.square, self.player_angle)
+
+    def update_enemy_direction(self):
+        self.enemy_direction = {'x': 0, 'y': 0}
+        if 'Up' in self.keys_pressed:
+            self.enemy_direction['y'] = -self.step_size
+        if 'Down' in self.keys_pressed:
+            self.enemy_direction['y'] = self.step_size
+        if 'Left' in self.keys_pressed:
+            self.enemy_angle -= angle_turn  # Поворот вліво
+            self.update_tank_rotation(self.enemy_square, self.enemy_angle)
+        if 'Right' in self.keys_pressed:
+            self.enemy_angle += angle_turn  # Поворот вправо
+            self.update_tank_rotation(self.enemy_square, self.enemy_angle)
+
+    def move_tank(self, tank, angle, direction):
         rad = math.radians(angle)
-        dx = step * math.cos(rad)
-        dy = step * math.sin(rad)
+        dx = direction['y'] * math.cos(rad) - direction['x'] * math.sin(rad)
+        dy = direction['y'] * math.sin(rad) + direction['x'] * math.cos(rad)
         self.canvas.move(tank, dx, dy)
         self.prevent_tank_overlap()
 
@@ -283,8 +294,8 @@ class Dysha_of_Tanks:
             self.reset_tanks()
 
     def update_hp_bar(self, fill, hp, text):
-        hp = max(hp, 0)  # Ensure HP doesn't go below 0
-        bar_length = self.hp_length * hp / 100  # Proportional HP bar length
+        hp = max(hp, 0)  # Забезпечуємо, що HP не стає меншим за 0
+        bar_length = self.hp_length * hp / 100  # Пропорційна довжина шкали HP
         self.canvas.coords(fill, self.canvas.coords(fill)[0], self.canvas.coords(fill)[1],
                            self.canvas.coords(fill)[0] + bar_length, self.canvas.coords(fill)[3])
         self.canvas.itemconfig(text, text=f'HP: {hp}')
@@ -294,7 +305,53 @@ class Dysha_of_Tanks:
     def game_over(self):
         winner = "Player" if self.enemy_hp <= 0 else "Enemy"
         self.canvas.create_text(board_width // 2, board_height // 2, text=f"{winner} Wins!", font=("Arial", 50), fill="red")
-        self.screen.after(2000, self.exit_game)  # Delay before exit
+
+        # Додавання кнопки для перезапуску гри
+        self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
+                                     width=12, height=4)
+        self.restart_button.place(x=20, y=120)
+
+    def restart_game(self):
+        self.canvas.delete("all")  # Очистка канвасу
+        self.keys_pressed.clear()
+        self.bullets.clear()
+        self.enemy_bullets.clear()
+        self.last_shot_time_player = 0
+        self.last_shot_time_enemy = 0
+
+        self.player_hp = player_hp
+        self.enemy_hp = enemy_hp
+        self.player_angle = player_angle  # Встановлюємо початковий кут повороту танка гравця
+        self.enemy_angle = enemy_angle  # Встановлюємо початковий кут повороту ворожого танка
+
+        # Відтворення ігрових елементів
+        self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
+                                                          outline=outline_color, width=outline_width, fill=board_color)
+
+        self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
+                                                          edge_distance_width + self.hp_length, edge_distance_height - 10,
+                                                          outline='black', width=self.hp_outline_width)
+        self.player_hp_fill = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
+                                                           edge_distance_width + self.hp_length, edge_distance_height - 10,
+                                                           fill='red')
+
+        self.enemy_hp_bar = self.canvas.create_rectangle(board_width - self.hp_length, board_height + 20,
+                                                         board_width, board_height + self.hp_height + 20,
+                                                         outline='black', width=self.hp_outline_width)
+        self.enemy_hp_fill = self.canvas.create_rectangle(board_width - self.hp_length, board_height + 20,
+                                                          board_width, board_height + self.hp_height + 20,
+                                                          fill='red')
+
+        self.player_hp_text = self.canvas.create_text(edge_distance_width + self.hp_length + 40, edge_distance_height - self.hp_height / 2 - 10,
+                                                      text=f'HP: {self.player_hp}', font=('Arial', 14), fill='black')
+        self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 50, board_height + 20 + self.hp_height / 2,
+                                                     text=f'HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
+
+        self.create_square()
+        self.create_enemy_square()
+
+        # Приховання кнопки рестарту
+        self.restart_button.place_forget()
 
     def exit_game(self):
         self.screen.destroy()
