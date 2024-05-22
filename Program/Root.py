@@ -14,7 +14,7 @@ class Dysha_of_Tanks:
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
                                                           outline=outline_color, width=outline_width, fill=board_color)
 
-        self.exit_button = Button(self.screen, text="Вихід", command=self.exit_game, bg=botton_color,
+        self.exit_button = Button(self.screen, text="Exit", command=self.exit_game, bg=botton_color,
                                   width=12, height=4)
         self.exit_button.place(x=20, y=20)
 
@@ -30,14 +30,14 @@ class Dysha_of_Tanks:
 
         self.player_hp = player_hp
         self.enemy_hp = enemy_hp
-        self.damage = damage  # Зменшення HP при влучанні
-        self.touch_damage = touch_damage  # Зменшення HP при зіткненні
+        self.damage = damage  # HP reduction on hit
+        self.touch_damage = touch_damage  # HP reduction on collision
 
         self.hp_length = hp_length
         self.hp_height = hp_height
         self.hp_outline_width = hp_outline_width
 
-        # Розміщення шкал HP
+        # Placing HP bars
         self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
                                                           edge_distance_width + self.hp_length, edge_distance_height - 10,
                                                           outline='black', width=self.hp_outline_width)
@@ -57,12 +57,16 @@ class Dysha_of_Tanks:
         self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 50, board_height + 20 + self.hp_height / 2,
                                                      text=f'HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
 
-        self.player_angle = player_angle  # Початковий кут повороту танка гравця
-        self.enemy_angle = enemy_angle  # Кут повороту ворожого танка в градусах
+        self.player_angle = player_angle  # Initial player tank angle
+        self.enemy_angle = enemy_angle  # Initial enemy tank angle
 
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
         self.screen.bind('<KeyRelease>', self.handle_key_release)
+
+        # Disable Caps Lock and Tab keys
+        self.screen.bind('<Caps_Lock>', self.disable_key)
+        self.screen.bind('<Tab>', self.disable_key)
 
         self.create_square()
         self.create_enemy_square()
@@ -104,13 +108,16 @@ class Dysha_of_Tanks:
         key = event.keysym
         self.keys_pressed.add(key)
         if key.lower() == 'shift_l':
-            self.shoot(self.square, self.player_angle + 180)  # Стріляє в протилежну сторону
+            self.shoot(self.square, self.player_angle + 180)  # Shoot in the opposite direction
         if key.lower() == 'shift_r':
-            self.shoot_enemy(self.enemy_square, self.enemy_angle + 180)  # Стріляє з протилежної сторони танка
+            self.shoot_enemy(self.enemy_square, self.enemy_angle + 180)  # Shoot in the opposite direction
 
     def handle_key_release(self, event):
         key = event.keysym
         self.keys_pressed.discard(key)
+
+    def disable_key(self, event):
+        return "break"
 
     def update_movement(self):
         for key in self.keys_pressed:
@@ -123,16 +130,16 @@ class Dysha_of_Tanks:
             if key == 'Down':
                 self.move_tank(self.enemy_square, self.enemy_angle, self.step_size)
             if key.lower() == 'a':
-                self.player_angle -= angle_turn  # Поворот вліво
+                self.player_angle -= angle_turn  # Turn left
                 self.update_tank_rotation(self.square, self.player_angle)
             if key.lower() == 'd':
-                self.player_angle += angle_turn  # Поворот вправо
+                self.player_angle += angle_turn  # Turn right
                 self.update_tank_rotation(self.square, self.player_angle)
             if key == 'Left':
-                self.enemy_angle -= angle_turn  # Поворот вліво
+                self.enemy_angle -= angle_turn  # Turn left
                 self.update_tank_rotation(self.enemy_square, self.enemy_angle)
             if key == 'Right':
-                self.enemy_angle += angle_turn  # Поворот вправо
+                self.enemy_angle += angle_turn  # Turn right
                 self.update_tank_rotation(self.enemy_square, self.enemy_angle)
 
         self.limit_movement(self.square)
@@ -159,7 +166,6 @@ class Dysha_of_Tanks:
         return x, y
 
     def limit_movement(self, object):
-        # Обмеження для танка
         coords = self.canvas.coords(object)
         x1, y1, x2, y2 = min(coords[::2]), min(coords[1::2]), max(coords[::2]), max(coords[1::2])
         if x1 <= edge_distance_width:
@@ -185,7 +191,7 @@ class Dysha_of_Tanks:
         if current_time - self.last_shot_time_player >= 1:
             bullet_coords = self.calculate_bullet_coords(tank, angle)
             bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
-            self.bullets.append((bullet, angle))  # Зберігаємо кут разом з кулею
+            self.bullets.append((bullet, angle))
             self.last_shot_time_player = current_time
 
     def shoot_enemy(self, tank, angle):
@@ -193,7 +199,7 @@ class Dysha_of_Tanks:
         if current_time - self.last_shot_time_enemy >= 1:
             bullet_coords = self.calculate_bullet_coords(tank, angle)
             bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
-            self.enemy_bullets.append((bullet, angle))  # Зберігаємо кут разом з кулею
+            self.enemy_bullets.append((bullet, angle))
             self.last_shot_time_enemy = current_time
 
     def calculate_bullet_coords(self, tank, angle):
@@ -225,7 +231,6 @@ class Dysha_of_Tanks:
         self.limit_bullet(bullet)
 
     def check_bullet_collision(self):
-        # Перевірка попадання куль гравця у ворожий танк
         for bullet, _ in self.bullets[:]:
             if self.check_collision(bullet, self.enemy_square):
                 self.canvas.delete(bullet)
@@ -233,7 +238,6 @@ class Dysha_of_Tanks:
                 self.enemy_hp -= self.damage
                 self.update_hp_bar(self.enemy_hp_fill, self.enemy_hp, self.enemy_hp_text)
 
-        # Перевірка попадання куль ворога у танк гравця
         for bullet, _ in self.enemy_bullets[:]:
             if self.check_collision(bullet, self.square):
                 self.canvas.delete(bullet)
@@ -249,7 +253,6 @@ class Dysha_of_Tanks:
         bullet_x1, bullet_y1, bullet_x2, bullet_y2 = min(bullet_coords[::2]), min(bullet_coords[1::2]), max(bullet_coords[::2]), max(bullet_coords[1::2])
         tank_x1, tank_y1, tank_x2, tank_y2 = min(tank_coords[::2]), min(tank_coords[1::2]), max(tank_coords[::2]), max(tank_coords[1::2])
         return bullet_x1 < tank_x2 and bullet_x2 > tank_x1 and bullet_y1 < tank_y2 and bullet_y2 > tank_y1
-
 
     def check_tank_collision(self):
         if self.tanks_collide():
@@ -268,8 +271,8 @@ class Dysha_of_Tanks:
         return player_x1 < enemy_x2 and player_x2 > enemy_x1 and player_y1 < enemy_y2 and player_y2 > enemy_y1
 
     def reset_tanks(self):
-        self.player_hp -= self.touch_damage
-        self.enemy_hp -= self.touch_damage
+        self.player_hp = max(self.player_hp - self.touch_damage, 0)
+        self.enemy_hp = max(self.enemy_hp - self.touch_damage, 0)
         self.update_hp_bar(self.player_hp_fill, self.player_hp, self.player_hp_text)
         self.update_hp_bar(self.enemy_hp_fill, self.enemy_hp, self.enemy_hp_text)
         self.canvas.coords(self.square, *sum(self.calculate_square_points(*tank_coords, self.square_size, self.player_angle), ()))
@@ -280,7 +283,8 @@ class Dysha_of_Tanks:
             self.reset_tanks()
 
     def update_hp_bar(self, fill, hp, text):
-        bar_length = self.hp_length * hp / 100  # Пропорційна довжина шкали HP
+        hp = max(hp, 0)  # Ensure HP doesn't go below 0
+        bar_length = self.hp_length * hp / 100  # Proportional HP bar length
         self.canvas.coords(fill, self.canvas.coords(fill)[0], self.canvas.coords(fill)[1],
                            self.canvas.coords(fill)[0] + bar_length, self.canvas.coords(fill)[3])
         self.canvas.itemconfig(text, text=f'HP: {hp}')
@@ -288,8 +292,9 @@ class Dysha_of_Tanks:
             self.game_over()
 
     def game_over(self):
-        self.canvas.create_text(board_width // 2, board_height // 2, text="Game Over", font=("Arial", 50), fill="red")
-        self.screen.after(2000, self.exit_game)  # Затримка перед виходом
+        winner = "Player" if self.enemy_hp <= 0 else "Enemy"
+        self.canvas.create_text(board_width // 2, board_height // 2, text=f"{winner} Wins!", font=("Arial", 50), fill="red")
+        self.screen.after(2000, self.exit_game)  # Delay before exit
 
     def exit_game(self):
         self.screen.destroy()
