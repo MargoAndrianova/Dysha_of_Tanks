@@ -21,7 +21,16 @@ class Dysha_of_Tanks:
         self.step_size = step_of_tank
         self.square_size = tank_size
 
-        self.keys_pressed = set()
+        self.keys_pressed = {
+            'w': False,
+            's': False,
+            'a': False,
+            'd': False,
+            'Up': False,
+            'Down': False,
+            'Left': False,
+            'Right': False
+        }
         self.bullets = []
         self.enemy_bullets = []
 
@@ -109,7 +118,8 @@ class Dysha_of_Tanks:
 
     def handle_key_press(self, event):
         key = event.keysym
-        self.keys_pressed.add(key)
+        if key in self.keys_pressed:
+            self.keys_pressed[key] = True
         if key.lower() == 'shift_l':
             self.shoot(self.square, self.player_angle + 180)  # Стріляє в протилежну сторону
         if key.lower() == 'shift_r':
@@ -118,7 +128,7 @@ class Dysha_of_Tanks:
     def handle_key_release(self, event):
         key = event.keysym
         if key in self.keys_pressed:
-            self.keys_pressed.remove(key)
+            self.keys_pressed[key] = False
 
     def disable_key(self, event):
         return "break"
@@ -134,27 +144,27 @@ class Dysha_of_Tanks:
 
     def update_player_direction(self):
         self.player_direction = {'x': 0, 'y': 0}
-        if 'w' in self.keys_pressed:
+        if self.keys_pressed['w']:
             self.player_direction['y'] = -self.step_size
-        if 's' in self.keys_pressed:
+        if self.keys_pressed['s']:
             self.player_direction['y'] = self.step_size
-        if 'a' in self.keys_pressed:
+        if self.keys_pressed['a']:
             self.player_angle -= angle_turn  # Поворот вліво
             self.update_tank_rotation(self.square, self.player_angle)
-        if 'd' in self.keys_pressed:
+        if self.keys_pressed['d']:
             self.player_angle += angle_turn  # Поворот вправо
             self.update_tank_rotation(self.square, self.player_angle)
 
     def update_enemy_direction(self):
         self.enemy_direction = {'x': 0, 'y': 0}
-        if 'Up' in self.keys_pressed:
+        if self.keys_pressed['Up']:
             self.enemy_direction['y'] = -self.step_size
-        if 'Down' in self.keys_pressed:
+        if self.keys_pressed['Down']:
             self.enemy_direction['y'] = self.step_size
-        if 'Left' in self.keys_pressed:
+        if self.keys_pressed['Left']:
             self.enemy_angle -= angle_turn  # Поворот вліво
             self.update_tank_rotation(self.enemy_square, self.enemy_angle)
-        if 'Right' in self.keys_pressed:
+        if self.keys_pressed['Right']:
             self.enemy_angle += angle_turn  # Поворот вправо
             self.update_tank_rotation(self.enemy_square, self.enemy_angle)
 
@@ -311,11 +321,11 @@ class Dysha_of_Tanks:
         # Додавання кнопки для перезапуску гри
         self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
                                      width=12, height=4)
-        self.restart_button.place(x=20, y=80)
+        self.restart_button.place(x=20, y=120)
 
     def restart_game(self):
         self.canvas.delete("all")  # Очистка канвасу
-        self.keys_pressed.clear()
+        self.keys_pressed = {key: False for key in self.keys_pressed}
         self.bullets.clear()
         self.enemy_bullets.clear()
         self.last_shot_time_player = 0
