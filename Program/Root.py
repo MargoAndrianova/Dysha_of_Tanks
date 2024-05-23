@@ -39,7 +39,6 @@ class Dysha_of_Tanks:
 
         self.player_hp = player_hp
         self.enemy_hp = enemy_hp
-        self.damage = damage  # Зменшення HP при влучанні
         self.touch_damage = touch_damage  # Зменшення HP при зіткненні
 
         self.hp_length = hp_length
@@ -88,6 +87,7 @@ class Dysha_of_Tanks:
         self.check_bullet_collision()
         self.update_movement()
         self.check_tank_collision()
+        self.update_damage_based_on_distance()
 
     def create_square(self):
         x, y = tank_coords
@@ -258,14 +258,14 @@ class Dysha_of_Tanks:
             if self.check_collision(bullet, self.enemy_square):
                 self.canvas.delete(bullet)
                 self.bullets.remove((bullet, _))
-                self.enemy_hp -= self.damage
+                self.enemy_hp -= self.get_damage()
                 self.update_hp_bar(self.enemy_hp_fill, self.enemy_hp, self.enemy_hp_text)
 
         for bullet, _ in self.enemy_bullets[:]:
             if self.check_collision(bullet, self.square):
                 self.canvas.delete(bullet)
                 self.enemy_bullets.remove((bullet, _))
-                self.player_hp -= self.damage
+                self.player_hp -= self.get_damage()
                 self.update_hp_bar(self.player_hp_fill, self.player_hp, self.player_hp_text)
 
         self.screen.after(bullet_interval, self.check_bullet_collision)
@@ -314,6 +314,25 @@ class Dysha_of_Tanks:
         if hp <= 0:
             self.game_over()
 
+    def get_damage(self):
+        distance = self.calculate_distance_between_tanks()
+        if distance <= 250:
+            return 30
+        elif distance <= 500:
+            return 20
+        elif distance <= 750:
+            return 15
+        else:
+            return 10  # Базове значення, якщо більше 100 пікселів
+
+    def calculate_distance_between_tanks(self):
+        player_center = self.get_tank_center(self.square)
+        enemy_center = self.get_tank_center(self.enemy_square)
+        return math.sqrt((player_center[0] - enemy_center[0]) ** 2 + (player_center[1] - enemy_center[1]) ** 2)
+
+    def update_damage_based_on_distance(self):
+        self.screen.after(100, self.update_damage_based_on_distance)  # Викликаємо функцію кожні 100 мс
+
     def game_over(self):
         winner = "Player" if self.enemy_hp <= 0 else "Enemy"
         self.canvas.create_text(board_width // 2, board_height // 2, text=f"{winner} Wins!", font=("Arial", 50), fill="red")
@@ -321,7 +340,7 @@ class Dysha_of_Tanks:
         # Додавання кнопки для перезапуску гри
         self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
                                      width=12, height=4)
-        self.restart_button.place(x=20, y=120)
+        self.restart_button.place(x=20, y=80)
 
     def restart_game(self):
         self.canvas.delete("all")  # Очистка канвасу
