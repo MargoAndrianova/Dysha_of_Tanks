@@ -2,6 +2,7 @@ from tkinter import *
 from Params import *
 import time
 import math
+import random
 
 class Dysha_of_Tanks:
     def __init__(self, screen):
@@ -19,6 +20,7 @@ class Dysha_of_Tanks:
         self.exit_button.place(x=20, y=20)
 
         self.step_size = step_of_tank
+        self.original_step_size = step_of_tank
         self.square_size = tank_size
 
         self.keys_pressed = {
@@ -33,9 +35,12 @@ class Dysha_of_Tanks:
         }
         self.bullets = []
         self.enemy_bullets = []
+        self.boosts = []
 
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
+        self.player_speed_boost_time = 0
+        self.enemy_speed_boost_time = 0
 
         self.player_hp = player_hp
         self.enemy_hp = enemy_hp
@@ -44,6 +49,11 @@ class Dysha_of_Tanks:
         self.hp_length = hp_length
         self.hp_height = hp_height
         self.hp_outline_width = hp_outline_width
+
+        self.bullet_speed = bullet_speed
+        self.original_bullet_speed = bullet_speed
+        self.player_bullet_speed_boost_time = 0
+        self.enemy_bullet_speed_boost_time = 0
 
         # Розміщення шкал HP
         self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
@@ -71,6 +81,9 @@ class Dysha_of_Tanks:
         self.player_direction = {'x': 0, 'y': 0}
         self.enemy_direction = {'x': 0, 'y': 0}
 
+        self.player_step_size = self.step_size
+        self.enemy_step_size = self.step_size
+
         self.screen.bind('<Escape>', lambda event: self.screen.quit())
         self.screen.bind('<KeyPress>', self.handle_key_press)
         self.screen.bind('<KeyRelease>', self.handle_key_release)
@@ -88,6 +101,8 @@ class Dysha_of_Tanks:
         self.update_movement()
         self.check_tank_collision()
         self.update_damage_based_on_distance()
+        self.spawn_boost()
+        self.check_boost_collision()
 
     def create_square(self):
         x, y = tank_coords
@@ -137,17 +152,17 @@ class Dysha_of_Tanks:
         self.update_player_direction()
         self.update_enemy_direction()
 
-        self.move_tank(self.square, self.player_angle, self.player_direction)
-        self.move_tank(self.enemy_square, self.enemy_angle, self.enemy_direction)
+        self.move_tank(self.square, self.player_angle, self.player_direction, self.player_step_size)
+        self.move_tank(self.enemy_square, self.enemy_angle, self.enemy_direction, self.enemy_step_size)
 
         self.screen.after(50, self.update_movement)
 
     def update_player_direction(self):
         self.player_direction = {'x': 0, 'y': 0}
         if self.keys_pressed['w']:
-            self.player_direction['y'] = -self.step_size
+            self.player_direction['y'] = -self.player_step_size
         if self.keys_pressed['s']:
-            self.player_direction['y'] = self.step_size
+            self.player_direction['y'] = self.player_step_size
         if self.keys_pressed['a']:
             self.player_angle -= angle_turn  # Поворот вліво
             self.update_tank_rotation(self.square, self.player_angle)
@@ -158,9 +173,9 @@ class Dysha_of_Tanks:
     def update_enemy_direction(self):
         self.enemy_direction = {'x': 0, 'y': 0}
         if self.keys_pressed['Up']:
-            self.enemy_direction['y'] = -self.step_size
+            self.enemy_direction['y'] = -self.enemy_step_size
         if self.keys_pressed['Down']:
-            self.enemy_direction['y'] = self.step_size
+            self.enemy_direction['y'] = self.enemy_step_size
         if self.keys_pressed['Left']:
             self.enemy_angle -= angle_turn  # Поворот вліво
             self.update_tank_rotation(self.enemy_square, self.enemy_angle)
@@ -168,7 +183,7 @@ class Dysha_of_Tanks:
             self.enemy_angle += angle_turn  # Поворот вправо
             self.update_tank_rotation(self.enemy_square, self.enemy_angle)
 
-    def move_tank(self, tank, angle, direction):
+    def move_tank(self, tank, angle, direction, step_size):
         rad = math.radians(angle)
         dx = direction['y'] * math.cos(rad) - direction['x'] * math.sin(rad)
         dy = direction['y'] * math.sin(rad) + direction['x'] * math.cos(rad)
@@ -248,8 +263,8 @@ class Dysha_of_Tanks:
 
     def move_bullet(self, bullet, angle):
         rad = math.radians(angle)
-        dx = bullet_speed * math.cos(rad)
-        dy = bullet_speed * math.sin(rad)
+        dx = self.bullet_speed * math.cos(rad)
+        dy = self.bullet_speed * math.sin(rad)
         self.canvas.move(bullet, dx, dy)
         self.limit_bullet(bullet)
 
@@ -323,7 +338,7 @@ class Dysha_of_Tanks:
         elif distance <= 750:
             return 15
         else:
-            return 10  # Базове значення, якщо більше 100 пікселів
+            return 10  # Базове значення, якщо більше 750 пікселів
 
     def calculate_distance_between_tanks(self):
         player_center = self.get_tank_center(self.square)
@@ -333,6 +348,77 @@ class Dysha_of_Tanks:
     def update_damage_based_on_distance(self):
         self.screen.after(100, self.update_damage_based_on_distance)  # Викликаємо функцію кожні 100 мс
 
+    def spawn_boost(self):
+        x = random.randint(edge_distance_width + 50, board_width - 50)
+        y = random.randint(edge_distance_height + 50, board_height - 50)
+        boost_type = random.choice(['speed', 'bullet'])
+        if boost_type == 'speed':
+            boost = self.canvas.create_rectangle(x - 10, y - 10, x + 10, y + 10, fill='blue')
+        else:
+            boost = self.canvas.create_rectangle(x - 10, y - 10, x + 10, y + 10, fill='green')
+        self.boosts.append((boost, boost_type))
+        self.screen.after(10000, self.spawn_boost)  # Спавн нового буста кожні 10 секунд
+        self.screen.after(10000, lambda: self.remove_boost(boost))  # Видалення буста через 10 секунд
+
+    def remove_boost(self, boost):
+        for b, _ in self.boosts:
+            if b == boost:
+                self.canvas.delete(boost)
+                self.boosts.remove((b, _))
+                break
+
+    def check_boost_collision(self):
+        for boost, boost_type in self.boosts[:]:
+            if self.check_collision_boost(boost, self.square):
+                self.canvas.delete(boost)
+                self.boosts.remove((boost, boost_type))
+                self.apply_boost(self.square, boost_type)
+            elif self.check_collision_boost(boost, self.enemy_square):
+                self.canvas.delete(boost)
+                self.boosts.remove((boost, boost_type))
+                self.apply_boost(self.enemy_square, boost_type)
+
+        self.screen.after(100, self.check_boost_collision)
+
+    def check_collision_boost(self, boost, tank):
+        boost_coords = self.canvas.coords(boost)
+        tank_coords = self.canvas.coords(tank)
+        boost_x1, boost_y1, boost_x2, boost_y2 = boost_coords
+        tank_x1, tank_y1, tank_x2, tank_y2 = min(tank_coords[::2]), min(tank_coords[1::2]), max(tank_coords[::2]), max(tank_coords[1::2])
+        return boost_x1 < tank_x2 and boost_x2 > tank_x1 and boost_y1 < tank_y2 and boost_y2 > tank_y1
+
+    def apply_boost(self, tank, boost_type):
+        if boost_type == 'speed':
+            if tank == self.square:
+                self.player_step_size = self.original_step_size * 2
+                self.player_speed_boost_time = time.time()
+            elif tank == self.enemy_square:
+                self.enemy_step_size = self.original_step_size * 2
+                self.enemy_speed_boost_time = time.time()
+        elif boost_type == 'bullet':
+            if tank == self.square:
+                self.bullet_speed = self.original_bullet_speed * 1.5
+                self.player_bullet_speed_boost_time = time.time()
+            elif tank == self.enemy_square:
+                self.bullet_speed = self.original_bullet_speed * 1.5
+                self.enemy_bullet_speed_boost_time = time.time()
+        self.remove_boost_after_delay(boost_type)
+
+    def remove_boost_after_delay(self, boost_type):
+        current_time = time.time()
+        if boost_type == 'speed':
+            if current_time - self.player_speed_boost_time >= 5:
+                self.player_step_size = self.original_step_size
+            if current_time - self.enemy_speed_boost_time >= 5:
+                self.enemy_step_size = self.original_step_size
+        elif boost_type == 'bullet':
+            if current_time - self.player_bullet_speed_boost_time >= 5:
+                self.bullet_speed = self.original_bullet_speed
+            if current_time - self.enemy_bullet_speed_boost_time >= 5:
+                self.bullet_speed = self.original_bullet_speed
+
+        self.screen.after(100, lambda: self.remove_boost_after_delay(boost_type))
+
     def game_over(self):
         winner = "Player" if self.enemy_hp <= 0 else "Enemy"
         self.canvas.create_text(board_width // 2, board_height // 2, text=f"{winner} Wins!", font=("Arial", 50), fill="red")
@@ -340,18 +426,26 @@ class Dysha_of_Tanks:
         # Додавання кнопки для перезапуску гри
         self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
                                      width=12, height=4)
-        self.restart_button.place(x=20, y=80)
+        self.restart_button.place(x=20, y=120)
 
     def restart_game(self):
         self.canvas.delete("all")  # Очистка канвасу
         self.keys_pressed = {key: False for key in self.keys_pressed}
         self.bullets.clear()
         self.enemy_bullets.clear()
+        self.boosts.clear()
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
+        self.player_speed_boost_time = 0
+        self.enemy_speed_boost_time = 0
+        self.player_bullet_speed_boost_time = 0
+        self.enemy_bullet_speed_boost_time = 0
 
         self.player_hp = player_hp
         self.enemy_hp = enemy_hp
+        self.player_step_size = self.original_step_size
+        self.enemy_step_size = self.original_step_size
+        self.bullet_speed = self.original_bullet_speed
         self.player_angle = player_angle  # Встановлюємо початковий кут повороту танка гравця
         self.enemy_angle = enemy_angle  # Встановлюємо початковий кут повороту ворожого танка
 
@@ -383,6 +477,10 @@ class Dysha_of_Tanks:
 
         # Приховання кнопки рестарту
         self.restart_button.place_forget()
+
+        # Перезапускаємо спавн бустів
+        self.spawn_boost()
+        self.check_boost_collision()
 
     def exit_game(self):
         self.screen.destroy()

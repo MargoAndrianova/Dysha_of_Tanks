@@ -10,7 +10,7 @@ enemy_bullet_color = 'orange'
 tank_coords = [250, 150]
 enemy_coords = [1100, 625]
 
-step_of_tank = 10
+step_of_tank = 5
 angle_turn = 10
 tank_size = 50
 
