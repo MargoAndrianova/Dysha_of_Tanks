@@ -162,7 +162,9 @@ class Dysha_of_Tanks:
         rad = math.radians(angle)
         dx = direction['y'] * math.cos(rad) - direction['x'] * math.sin(rad)
         dy = direction['y'] * math.sin(rad) + direction['x'] * math.cos(rad)
+
         self.canvas.move(tank, dx, dy)
+        self.limit_movement(tank)
         self.prevent_tank_overlap()
 
     def update_tank_rotation(self, tank, angle):
@@ -176,17 +178,17 @@ class Dysha_of_Tanks:
         y = sum(coords[1::2]) / len(coords[1::2])
         return x, y
 
-    def limit_movement(self, object):
-        coords = self.canvas.coords(object)
+    def limit_movement(self, tank):
+        coords = self.canvas.coords(tank)
         x1, y1, x2, y2 = min(coords[::2]), min(coords[1::2]), max(coords[::2]), max(coords[1::2])
-        if x1 <= edge_distance_width:
-            self.canvas.move(object, edge_distance_width - x1, 0)
-        if y1 <= edge_distance_height:
-            self.canvas.move(object, 0, edge_distance_height - y1)
-        if x2 >= board_width:
-            self.canvas.move(object, board_width - x2, 0)
-        if y2 >= board_height:
-            self.canvas.move(object, 0, board_height - y2)
+        if x1 < edge_distance_width:
+            self.canvas.move(tank, edge_distance_width - x1, 0)
+        if y1 < edge_distance_height:
+            self.canvas.move(tank, 0, edge_distance_height - y1)
+        if x2 > board_width:
+            self.canvas.move(tank, board_width - x2, 0)
+        if y2 > board_height:
+            self.canvas.move(tank, 0, board_height - y2)
 
     def limit_bullet(self, object):
         x1, y1, x2, y2 = self.canvas.coords(object)
@@ -309,7 +311,7 @@ class Dysha_of_Tanks:
         # Додавання кнопки для перезапуску гри
         self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
                                      width=12, height=4)
-        self.restart_button.place(x=20, y=120)
+        self.restart_button.place(x=20, y=80)
 
     def restart_game(self):
         self.canvas.delete("all")  # Очистка канвасу
