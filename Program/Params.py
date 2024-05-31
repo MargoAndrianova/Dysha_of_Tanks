@@ -6,6 +6,10 @@ square_color = "#d23435"
 enemy_color = "#57394a"
 bullet_color = 'yellow'
 enemy_bullet_color = 'orange'
+tank_image_path = 'tank.png'
+speed_boost_image_path = 'speed_boost.png'
+bullet_speed_boost_image_path = 'bullet_speed_boost.png'
+bush_image_path = 'bush.png'
 
 tank_coords = [250, 150]
 enemy_coords = [1100, 625]
@@ -14,8 +18,8 @@ step_of_tank = 5
 angle_turn = 10
 tank_size = 50
 
-player_angle = 180
-enemy_angle = 0
+player_angle = 0
+enemy_angle = 180
 
 player_hp = 100
 enemy_hp = 100
