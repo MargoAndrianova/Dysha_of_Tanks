@@ -6,12 +6,15 @@ import random
 from Params import *
 
 class Dysha_of_Tanks:
-    def __init__(self, screen):
+    def __init__(self, screen, player_name, enemy_name):
         self.screen = screen
         self.screen.attributes('-fullscreen', True)
 
         self.canvas = Canvas(self.screen, bg=screen_color)
         self.canvas.pack(fill=BOTH, expand=True)
+
+        self.player_name = player_name
+        self.enemy_name = enemy_name
 
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
                                                           outline=outline_color, width=outline_width, fill=board_color)
@@ -78,10 +81,10 @@ class Dysha_of_Tanks:
                                                           board_width, board_height + self.hp_height + 20,
                                                           fill='red')
 
-        self.player_hp_text = self.canvas.create_text(edge_distance_width + self.hp_length + 40, edge_distance_height - self.hp_height / 2 - 10,
-                                                      text=f'HP: {self.player_hp}', font=('Arial', 14), fill='black')
-        self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 50, board_height + 20 + self.hp_height / 2,
-                                                     text=f'HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
+        self.player_hp_text = self.canvas.create_text(edge_distance_width + self.hp_length + 100, edge_distance_height - self.hp_height / 2 - 10,
+                                                      text=f'{self.player_name} HP: {self.player_hp}', font=('Arial', 14), fill='black')
+        self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 100, board_height + 20 + self.hp_height / 2,
+                                                     text=f'{self.enemy_name} HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
 
         self.player_angle = player_angle  # Початковий кут повороту танка гравця
         self.enemy_angle = enemy_angle  # Кут повороту ворожого танка в градусах
@@ -184,7 +187,6 @@ class Dysha_of_Tanks:
         self.canvas.move(tank, dx, dy)
         self.limit_movement(tank)
         self.prevent_tank_overlap()
-        self.hide_tank_in_bush(tank)
 
     def update_tank_rotation(self, tank, angle, is_player):
         if is_player:
@@ -238,8 +240,6 @@ class Dysha_of_Tanks:
             bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
             self.bullets.append((bullet, angle))
             self.last_shot_time_player = current_time
-            self.show_tank(tank)  # Показати танк після стрільби
-            self.screen.after(3000, lambda: self.hide_tank_in_bush(tank))  # Заховати танк через 3 секунди
 
     def shoot_enemy(self, tank, angle):
         current_time = time.time()
@@ -248,8 +248,6 @@ class Dysha_of_Tanks:
             bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
             self.enemy_bullets.append((bullet, angle))
             self.last_shot_time_enemy = current_time
-            self.show_tank(tank)  # Показати танк після стрільби
-            self.screen.after(3000, lambda: self.hide_tank_in_bush(tank))  # Заховати танк через 3 секунди
 
     def shoot_in_all_directions(self, tank):
         directions = [0, 90, 180, 270]
@@ -519,9 +517,9 @@ class Dysha_of_Tanks:
                                                           fill='red')
 
         self.player_hp_text = self.canvas.create_text(edge_distance_width + self.hp_length + 40, edge_distance_height - self.hp_height / 2 - 10,
-                                                      text=f'HP: {self.player_hp}', font=('Arial', 14), fill='black')
+                                                      text=f'{self.player_name} HP: {self.player_hp}', font=('Arial', 14), fill='black')
         self.enemy_hp_text = self.canvas.create_text(board_width - self.hp_length - 50, board_height + 20 + self.hp_height / 2,
-                                                     text=f'HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
+                                                     text=f'{self.enemy_name} HP: {self.enemy_hp}', font=('Arial', 14), fill='black')
 
         self.create_tank()
         self.create_enemy_tank()
@@ -539,7 +537,26 @@ class Dysha_of_Tanks:
     def exit_game(self):
         self.screen.destroy()
 
-if __name__ == '__main__':
+def start_game():
+    player_name = player_name_entry.get()
+    enemy_name = enemy_name_entry.get()
+    start_window.destroy()
     screen = Tk()
-    dysha = Dysha_of_Tanks(screen)
+    dysha = Dysha_of_Tanks(screen, player_name, enemy_name)
     screen.mainloop()
+
+# Початкове вікно для введення імені гравця
+start_window = Tk()
+start_window.title("Dysha of Tanks")
+
+Label(start_window, text="Ім'я гравця:").pack()
+player_name_entry = Entry(start_window)
+player_name_entry.pack()
+
+Label(start_window, text="Ім'я ворога:").pack()
+enemy_name_entry = Entry(start_window)
+enemy_name_entry.pack()
+
+Button(start_window, text="Почати гру", command=start_game).pack()
+
+start_window.mainloop()
