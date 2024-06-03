@@ -10,14 +10,22 @@ class Dysha_of_Tanks:
         self.screen = screen
         self.screen.attributes('-fullscreen', True)
 
-        self.canvas = Canvas(self.screen, bg=screen_color)
+        self.canvas = Canvas(self.screen, width=screen.winfo_screenwidth(), height=screen.winfo_screenheight())
         self.canvas.pack(fill=BOTH, expand=True)
+
+        # Завантаження зображення фону
+        self.background_image = Image.open('grace.png')
+        self.background_image = self.background_image.resize((950, 575), Image.LANCZOS)
+        self.background_photo = ImageTk.PhotoImage(self.background_image)
+
+        # Встановлення фону
+        self.canvas.create_image(edge_distance_width, edge_distance_height, image=self.background_photo, anchor=NW)
 
         self.player_name = player_name
         self.enemy_name = enemy_name
 
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
-                                                          outline=outline_color, width=outline_width, fill=board_color)
+                                                          outline=outline_color, width=outline_width, fill='')
 
         self.exit_button = Button(self.screen, text="Вихід", command=self.exit_game, bg=botton_color,
                                   width=12, height=4)
@@ -40,7 +48,7 @@ class Dysha_of_Tanks:
         self.bullets = []
         self.enemy_bullets = []
         self.boosts = []
-        self.bushes = []
+        self.craters = []
 
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
@@ -65,6 +73,33 @@ class Dysha_of_Tanks:
         self.original_tank_image = self.original_tank_image.resize((self.square_size, self.square_size), Image.LANCZOS)
         self.player_tank_photo = ImageTk.PhotoImage(self.original_tank_image)
         self.enemy_tank_photo = ImageTk.PhotoImage(self.original_tank_image)
+
+        # Завантаження зображення бустів
+        self.speed_boost_image = Image.open('speed_boost.png')
+        self.speed_boost_image = self.speed_boost_image.resize((40, 40), Image.LANCZOS)
+        self.speed_boost_photo = ImageTk.PhotoImage(self.speed_boost_image)
+
+        self.bullet_speed_boost_image = Image.open('bullet_speed_boost.png')
+        self.bullet_speed_boost_image = self.bullet_speed_boost_image.resize((40, 40), Image.LANCZOS)
+        self.bullet_speed_boost_photo = ImageTk.PhotoImage(self.bullet_speed_boost_image)
+
+        self.multi_shot_boost_image = Image.open('multi_shot_boost.png')
+        self.multi_shot_boost_image = self.multi_shot_boost_image.resize((40, 40), Image.LANCZOS)
+        self.multi_shot_boost_photo = ImageTk.PhotoImage(self.multi_shot_boost_image)
+
+        # Завантаження зображення кулі
+        self.original_bullet_image = Image.open('tank_bullet.png')
+        self.bullet_image = self.original_bullet_image.resize((30, 10), Image.LANCZOS)
+
+        # Завантаження зображення кратера
+        self.crater_image = Image.open('crator.png')
+        self.crater_image = self.crater_image.resize((40, 40), Image.LANCZOS)
+        self.crater_photo = ImageTk.PhotoImage(self.crater_image)
+
+        # Завантаження зображення переможця
+        self.winner_image = Image.open('winner.png')
+        self.winner_image = self.winner_image.resize((400, 400), Image.LANCZOS)
+        self.winner_photo = ImageTk.PhotoImage(self.winner_image)
 
         # Розміщення шкал HP
         self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
@@ -106,7 +141,6 @@ class Dysha_of_Tanks:
         self.create_tank()
         self.create_enemy_tank()
 
-        self.spawn_bushes()
         self.move_bullets()
         self.move_enemy_bullets()
         self.check_bullet_collision()
@@ -115,6 +149,7 @@ class Dysha_of_Tanks:
         self.update_damage_based_on_distance()
         self.spawn_boost()
         self.check_boost_collision()
+        self.check_crater_collision()
 
     def create_tank(self):
         x, y = tank_coords
@@ -236,29 +271,25 @@ class Dysha_of_Tanks:
     def shoot(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_player >= 1:
-            bullet_coords = self.calculate_bullet_coords(tank, angle)
-            bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
-            self.bullets.append((bullet, angle))
+            bullet_image = self.rotate_image(self.bullet_image, -angle)
+            bullet = self.canvas.create_image(*self.get_tank_front(tank, angle), image=bullet_image)
+            self.bullets.append((bullet, angle, bullet_image))
             self.last_shot_time_player = current_time
 
     def shoot_enemy(self, tank, angle):
         current_time = time.time()
         if current_time - self.last_shot_time_enemy >= 1:
-            bullet_coords = self.calculate_bullet_coords(tank, angle)
-            bullet = self.canvas.create_rectangle(bullet_coords, fill=enemy_bullet_color)
-            self.enemy_bullets.append((bullet, angle))
+            bullet_image = self.rotate_image(self.bullet_image, -angle)
+            bullet = self.canvas.create_image(*self.get_tank_front(tank, angle), image=bullet_image)
+            self.enemy_bullets.append((bullet, angle, bullet_image))
             self.last_shot_time_enemy = current_time
 
     def shoot_in_all_directions(self, tank):
-        directions = [0, 90, 180, 270]
+        directions = [0, 45, 90, 135, 180, 225, 270, 315]
         for angle in directions:
-            bullet_coords = self.calculate_bullet_coords(tank, angle)
-            bullet = self.canvas.create_rectangle(bullet_coords, fill=bullet_color)
-            self.bullets.append((bullet, angle))
-
-    def calculate_bullet_coords(self, tank, angle):
-        x, y = self.get_tank_front(tank, angle)
-        return x - 2, y - 2, x + 2, y + 2
+            bullet_image = self.rotate_image(self.bullet_image, -angle)
+            bullet = self.canvas.create_image(*self.get_tank_front(tank, angle), image=bullet_image)
+            self.bullets.append((bullet, angle, bullet_image))
 
     def get_tank_front(self, tank, angle):
         x, y = self.get_tank_center(tank)
@@ -270,12 +301,12 @@ class Dysha_of_Tanks:
         return front_x, front_y
 
     def move_bullets(self):
-        for bullet, angle in self.bullets[:]:
+        for bullet, angle, _ in self.bullets[:]:
             self.move_bullet(bullet, angle)
         self.screen.after(bullet_interval, self.move_bullets)
 
     def move_enemy_bullets(self):
-        for bullet, angle in self.enemy_bullets[:]:
+        for bullet, angle, _ in self.enemy_bullets[:]:
             self.move_bullet(bullet, angle)
         self.screen.after(bullet_interval, self.move_enemy_bullets)
 
@@ -287,19 +318,21 @@ class Dysha_of_Tanks:
         self.limit_bullet(bullet)
 
     def check_bullet_collision(self):
-        for bullet, _ in self.bullets[:]:
+        for bullet, _, _ in self.bullets[:]:
             if self.check_collision(bullet, self.enemy_tank):
                 self.canvas.delete(bullet)
-                self.bullets.remove((bullet, _))
+                self.bullets = [b for b in self.bullets if b[0] != bullet]
                 self.enemy_hp -= self.get_damage()
                 self.update_hp_bar(self.enemy_hp_fill, self.enemy_hp, self.enemy_hp_text)
+                self.create_crater(self.get_tank_center(self.enemy_tank))
 
-        for bullet, _ in self.enemy_bullets[:]:
+        for bullet, _, _ in self.enemy_bullets[:]:
             if self.check_collision(bullet, self.player_tank):
                 self.canvas.delete(bullet)
-                self.enemy_bullets.remove((bullet, _))
+                self.enemy_bullets = [b for b in self.enemy_bullets if b[0] != bullet]
                 self.player_hp -= self.get_damage()
                 self.update_hp_bar(self.player_hp_fill, self.player_hp, self.player_hp_text)
+                self.create_crater(self.get_tank_center(self.player_tank))
 
         self.screen.after(bullet_interval, self.check_bullet_collision)
 
@@ -372,19 +405,54 @@ class Dysha_of_Tanks:
     def update_damage_based_on_distance(self):
         self.screen.after(100, self.update_damage_based_on_distance)  # Викликаємо функцію кожні 100 мс
 
+    def create_crater(self, coords):
+        x, y = coords
+        crater = self.canvas.create_image(x, y, image=self.crater_photo)
+        self.craters.append(crater)
+        self.screen.after(5000, lambda: self.remove_crater(crater))
+
+    def remove_crater(self, crater):
+        self.canvas.delete(crater)
+        self.craters.remove(crater)
+
+    def check_crater_collision(self):
+        for crater in self.craters:
+            if self.check_collision_with_crater(self.player_tank, crater):
+                self.player_step_size = self.original_step_size // 2  # Зменшуємо швидкість гравця
+                self.screen.after(1500, self.reset_player_speed)  # Відновлюємо швидкість через 1.5 секунду
+            if self.check_collision_with_crater(self.enemy_tank, crater):
+                self.enemy_step_size = self.original_step_size // 2  # Зменшуємо швидкість ворога
+                self.screen.after(1500, self.reset_enemy_speed)  # Відновлюємо швидкість через 1.5 секунду
+        self.screen.after(100, self.check_crater_collision)
+
+    def check_collision_with_crater(self, tank, crater):
+        tank_coords = self.canvas.bbox(tank)
+        crater_coords = self.canvas.bbox(crater)
+        if not tank_coords or not crater_coords:
+            return False
+        tank_x1, tank_y1, tank_x2, tank_y2 = tank_coords
+        crater_x1, crater_y1, crater_x2, crater_y2 = crater_coords
+        return tank_x1 < crater_x2 and tank_x2 > crater_x1 and tank_y1 < crater_y2 and tank_y2 > crater_y1
+
+    def reset_player_speed(self):
+        self.player_step_size = self.original_step_size
+
+    def reset_enemy_speed(self):
+        self.enemy_step_size = self.original_step_size
+
     def spawn_boost(self):
         x = random.randint(edge_distance_width + 50, board_width - 50)
         y = random.randint(edge_distance_height + 50, board_height - 50)
         boost_type = random.choice(['speed', 'bullet', 'multi_shot'])
         if boost_type == 'speed':
-            boost = self.canvas.create_rectangle(x - 10, y - 10, x + 10, y + 10, fill='blue')
+            boost = self.canvas.create_image(x, y, image=self.speed_boost_photo)
         elif boost_type == 'bullet':
-            boost = self.canvas.create_rectangle(x - 10, y - 10, x + 10, y + 10, fill='green')
+            boost = self.canvas.create_image(x, y, image=self.bullet_speed_boost_photo)
         else:
-            boost = self.canvas.create_rectangle(x - 10, y - 10, x + 10, y + 10, fill='purple')
+            boost = self.canvas.create_image(x,y, image=self.multi_shot_boost_photo)
         self.boosts.append((boost, boost_type))
-        self.screen.after(10000, self.spawn_boost)  # Спавн нового буста кожні 10 секунд
-        self.screen.after(10000, lambda: self.remove_boost(boost))  # Видалення буста через 10 секунд
+        self.screen.after(7000, self.spawn_boost)  # Спавн нового буста кожні 7 секунд
+        self.screen.after(5000, lambda: self.remove_boost(boost))  # Видалення буста через 5 секунд
 
     def remove_boost(self, boost):
         for b, _ in self.boosts:
@@ -418,58 +486,52 @@ class Dysha_of_Tanks:
     def apply_boost(self, tank, boost_type):
         if boost_type == 'speed':
             if tank == self.player_tank:
-                self.player_step_size = self.original_step_size * 2
+                self.player_step_size = self.original_step_size * 1.5
                 self.player_speed_boost_time = time.time()
             elif tank == self.enemy_tank:
-                self.enemy_step_size = self.original_step_size * 2
+                self.enemy_step_size = self.original_step_size * 1.5
                 self.enemy_speed_boost_time = time.time()
         elif boost_type == 'bullet':
             if tank == self.player_tank:
-                self.bullet_speed = self.original_bullet_speed * 1.5
+                self.bullet_speed = self.original_bullet_speed * 2
                 self.player_bullet_speed_boost_time = time.time()
             elif tank == self.enemy_tank:
-                self.bullet_speed = self.original_bullet_speed * 1.5
+                self.bullet_speed = self.original_bullet_speed * 2
                 self.enemy_bullet_speed_boost_time = time.time()
         elif boost_type == 'multi_shot':
-            self.shoot_in_all_directions(tank)
+            if tank == self.player_tank:
+                self.shoot_in_all_directions(self.player_tank)
+            elif tank == self.enemy_tank:
+                self.shoot_in_all_directions(self.enemy_tank)
         self.remove_boost_after_delay(boost_type)
 
     def remove_boost_after_delay(self, boost_type):
         current_time = time.time()
         if boost_type == 'speed':
-            if current_time - self.player_speed_boost_time >= 5:
+            if current_time - self.player_speed_boost_time >= 3:
                 self.player_step_size = self.original_step_size
-            if current_time - self.enemy_speed_boost_time >= 5:
+            if current_time - self.enemy_speed_boost_time >= 3:
                 self.enemy_step_size = self.original_step_size
         elif boost_type == 'bullet':
-            if current_time - self.player_bullet_speed_boost_time >= 5:
+            if current_time - self.player_bullet_speed_boost_time >= 3:
                 self.bullet_speed = self.original_bullet_speed
-            if current_time - self.enemy_bullet_speed_boost_time >= 5:
+            if current_time - self.enemy_bullet_speed_boost_time >= 3:
                 self.bullet_speed = self.original_bullet_speed
 
         self.screen.after(100, lambda: self.remove_boost_after_delay(boost_type))
 
-    def spawn_bushes(self):
-        self.bushes = []
-        for _ in range(8):
-            x = random.randint(edge_distance_width + 50, board_width - 50)
-            y = random.randint(edge_distance_height + 50, board_height - 50)
-            bush = self.canvas.create_rectangle(x - 15, y - 15, x + 15, y + 15, fill='darkgreen')
-            self.bushes.append(bush)
-
-    def hide_tank_in_bush(self, tank):
-        for bush in self.bushes:
-            if self.check_collision_boost(tank, bush):
-                self.canvas.itemconfig(tank, state='hidden')
-                return
-        self.canvas.itemconfig(tank, state='normal')
-
-    def show_tank(self, tank):
-        self.canvas.itemconfig(tank, state='normal')
-
     def game_over(self):
-        winner = "Player" if self.enemy_hp <= 0 else "Enemy"
-        self.canvas.create_text(board_width // 2, board_height // 2, text=f"{winner} Wins!", font=("Arial", 50), fill="red")
+        winner = f"{self.player_name}" if self.enemy_hp <= 0 else f"{self.enemy_name}"
+        screen_width = self.screen.winfo_screenwidth()
+        screen_height = self.screen.winfo_screenheight()
+
+        # Відображення зображення переможця
+        self.canvas.create_image(screen_width // 2, screen_height // 2, image=self.winner_photo)
+
+        # Відображення тексту переможця
+        self.canvas.create_text(screen_width // 2, screen_height // 2 + 100, text=f"{winner} Wins!", font=("Arial", 50),
+                                fill="red")
+
 
         # Додавання кнопки для перезапуску гри
         self.restart_button = Button(self.screen, text="Рестарт", command=self.restart_game, bg=botton_color,
@@ -482,7 +544,7 @@ class Dysha_of_Tanks:
         self.bullets.clear()
         self.enemy_bullets.clear()
         self.boosts.clear()
-        self.bushes.clear()
+        self.craters.clear()
         self.last_shot_time_player = 0
         self.last_shot_time_enemy = 0
         self.player_speed_boost_time = 0
@@ -498,9 +560,16 @@ class Dysha_of_Tanks:
         self.player_angle = player_angle  # Встановлюємо початковий кут повороту танка гравця
         self.enemy_angle = enemy_angle  # Встановлюємо початковий кут повороту ворожого танка
 
+        self.background_image = Image.open('grace.png')
+        self.background_image = self.background_image.resize((950, 575), Image.LANCZOS)
+        self.background_photo = ImageTk.PhotoImage(self.background_image)
+
+        # Встановлення фону
+        self.canvas.create_image(edge_distance_width, edge_distance_height, image=self.background_photo, anchor=NW)
+
         # Відтворення ігрових елементів
         self.playing_board = self.canvas.create_rectangle(edge_distance_width, edge_distance_height, board_width, board_height,
-                                                          outline=outline_color, width=outline_width, fill=board_color)
+                                                          outline=outline_color, width=outline_width, fill='')
 
         self.player_hp_bar = self.canvas.create_rectangle(edge_distance_width, edge_distance_height - self.hp_height - 10,
                                                           edge_distance_width + self.hp_length, edge_distance_height - 10,
@@ -530,33 +599,7 @@ class Dysha_of_Tanks:
         # Перезапускаємо спавн бустів
         self.spawn_boost()
         self.check_boost_collision()
-
-        # Перезапускаємо спавн кущів
-        self.spawn_bushes()
+        self.check_crater_collision()
 
     def exit_game(self):
         self.screen.destroy()
-
-def start_game():
-    player_name = player_name_entry.get()
-    enemy_name = enemy_name_entry.get()
-    start_window.destroy()
-    screen = Tk()
-    dysha = Dysha_of_Tanks(screen, player_name, enemy_name)
-    screen.mainloop()
-
-# Початкове вікно для введення імені гравця
-start_window = Tk()
-start_window.title("Dysha of Tanks")
-
-Label(start_window, text="Ім'я гравця:").pack()
-player_name_entry = Entry(start_window)
-player_name_entry.pack()
-
-Label(start_window, text="Ім'я ворога:").pack()
-enemy_name_entry = Entry(start_window)
-enemy_name_entry.pack()
-
-Button(start_window, text="Почати гру", command=start_game).pack()
-
-start_window.mainloop()
